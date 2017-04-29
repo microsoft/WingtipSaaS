@@ -11,14 +11,14 @@ GO
 -- What venues are registered on the Wingtip platform right now?
 SELECT	VenueName,
 		VenueType
-FROM	dbo.Venues
+FROM	dbo.Venue
 
 GO
 
 -- What are the most popular venue types?
 SELECT VenueType, 
 	   Count(TicketPurchaseId) AS PurchasedTicketCount
-FROM   dbo.Venues
+FROM   dbo.Venue
 	   INNER JOIN dbo.TicketPurchases ON TicketPurchaseId > 0
 GROUP  BY VenueType
 ORDER  BY PurchasedTicketCount DESC
@@ -41,7 +41,7 @@ EXEC sp_execute_remote
 				VenueName,
 				EventName,
 				SUM(PurchaseTotal) AS PurchaseTotal
-	  FROM		Venues
+	  FROM		Venue
 				INNER JOIN Events ON Events.EventId > 0
 				INNER JOIN Tickets ON Tickets.EventId = Events.EventId
 				INNER JOIN TicketPurchases ON TicketPurchases.TicketPurchaseId = Tickets.TicketPurchaseId
@@ -59,7 +59,7 @@ INSERT INTO #tmpMaxRevenue (VenueName, EventName, PurchaseTotal, ShardName)
 EXEC sp_execute_remote  
     N'WtpTenantDBs',
 	N'SELECT	TOP (10)
-				(SELECT TOP (1) VenueName FROM Venues) AS VenueName,
+				(SELECT TOP (1) VenueName FROM Venue) AS VenueName,
 				EventName,
 				SUM(PurchaseTotal) AS PurchaseTotal
 	  FROM		Events 

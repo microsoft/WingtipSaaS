@@ -20,7 +20,7 @@ param(
 $ErrorActionPreference = "Stop" 
 
 Import-Module "$PSScriptRoot\..\Common\SubscriptionManagement" -Force
-Import-Module "$PSScriptRoot\..\AppVersionSpecific" -Force
+Import-Module "$PSScriptRoot\..\WtpConfig" -Force
 
 $config = Get-Configuration
 $TenantName = "Contoso Concert Hall"

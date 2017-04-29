@@ -6,19 +6,19 @@ $commandText = "
     DROP VIEW IF EXISTS VenueEvents
     GO
     CREATE VIEW VenueEvents AS
-    SELECT (SELECT TOP 1 VenueName FROM Venues) AS VenueName, EventId, EventName, Date FROM [events]
+    SELECT (SELECT TOP 1 VenueName FROM Venue) AS VenueName, EventId, EventName, Date FROM [events]
     GO
 
     DROP VIEW IF EXISTS VenueTicketPurchases
     GO
     CREATE VIEW VenueTicketPurchases AS
-    SELECT (SELECT TOP 1 VenueName FROM Venues) AS VenueName, TicketPurchaseId, PurchaseDate, PurchaseTotal, CustomerId FROM [TicketPurchases]
+    SELECT (SELECT TOP 1 VenueName FROM Venue) AS VenueName, TicketPurchaseId, PurchaseDate, PurchaseTotal, CustomerId FROM [TicketPurchases]
     GO
 
     DROP VIEW IF EXISTS VenueTickets 
     GO   
     CREATE VIEW VenueTickets AS 
-    SELECT (SELECT TOP 1 VenueName FROM Venues) AS VenueName, TicketId, RowNumber, SeatNumber, EventId, SectionId, TicketPurchaseId FROM [Tickets]
+    SELECT (SELECT TOP 1 VenueName FROM Venue) AS VenueName, TicketId, RowNumber, SeatNumber, EventId, SectionId, TicketPurchaseId FROM [Tickets]
     GO
     "
 

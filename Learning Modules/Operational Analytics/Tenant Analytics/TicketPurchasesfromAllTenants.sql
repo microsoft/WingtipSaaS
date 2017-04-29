@@ -31,11 +31,11 @@ SET @server2 = 'catalog-' + @WtpUser + '.database.windows.net'
 EXEC jobs.sp_add_jobstep
 @job_name='Ticket Purchases from all Tenants',
 @command=N'
-WITH Venues_CTE (VenueId, VenueName, VenueType, VenuePostalCode, X)
+WITH Venue_CTE (VenueId, VenueName, VenueType, VenuePostalCode, X)
 AS
-   (SELECT TOP 1 Convert(int, HASHBYTES(''md5'',VenueName)) AS VenueId, VenueName, VenueType, PostalCode AS VenuePostalCode, 1 AS X FROM Venues)
+   (SELECT TOP 1 Convert(int, HASHBYTES(''md5'',VenueName)) AS VenueId, VenueName, VenueType, PostalCode AS VenuePostalCode, 1 AS X FROM Venue)
 SELECT v.VenueId, v.VenueName, v.VenueType,v.VenuePostalCode, tp.TicketPurchaseId, tp.PurchaseDate, tp.PurchaseTotal, c.CustomerId, c.PostalCode as CustomerPostalCode, c.CountryCode, e.EventId, e.EventName, $(job_execution_id) AS job_execution_id FROM 
-Venues_CTE as v
+Venue_CTE as v
 INNER JOIN TicketPurchases AS tp ON v.X = 1
 INNER JOIN Tickets AS t ON t.TicketPurchaseId = tp.TicketPurchaseId
 INNER JOIN Events AS e ON t.EventId = e.EventId

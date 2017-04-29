@@ -22,7 +22,7 @@
 $ErrorActionPreference = "Stop"
 
 Import-Module $PSScriptRoot\Common\CatalogAndDatabaseManagement -Force
-Import-Module $PSScriptRoot\AppVersionSpecific -Force
+Import-Module $PSScriptRoot\WtpConfig -Force
 Import-Module $PSScriptRoot\ProvisionConfig -Force
 Import-Module $PSScriptRoot\UserConfig -Force
 

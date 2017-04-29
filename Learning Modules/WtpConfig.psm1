@@ -1,35 +1,13 @@
-#Import Wingtip App Tenant Registration dll [required for vOLD only] 
-Add-Type -Path $PSScriptRoot\WingtipApp_TenantRegistration.dll
+
+
 
 <#
 .SYNOPSIS
-    Returns an integer tenant key from a normalized tenant name for use in the catalog.
-#>
-function Get-TenantKey
-{
-    param
-    (
-        # Tenant name 
-        [parameter(Mandatory=$true)]
-        [String]$TenantName
-    )
-
-    $TenantName = $TenantName.Replace(' ', '').ToLower()
-
-    # Return Knuth hash of tenant name 
-    [Type]$TenantInitialization = [WingtipApp_TenantRegistration.TenantRegistration]
-
-    return $TenantInitialization::GetTenantId($TenantName)
-}
-
-<#
-.SYNOPSIS
-    Returns default configuration values that will be used by the Wingtip tickets application
+    Returns default configuration values that will be used by the Wingtip Tickets Platform application
 #>
 function Get-Configuration
 {
     $configuration = @{`
-        DeployByCopy = $true
         TemplatesLocationUrl = "https://wtpdeploystorageaccount.blob.core.windows.net/templates"
         TenantDatabaseTemplate = "tenantdatabasetemplate.json"
         TenantDatabaseCopyTemplate = "tenantdatabasecopytemplate.json"
@@ -42,11 +20,11 @@ function Get-Configuration
         DatabaseAndBacpacTemplate = "databaseandbacpactemplate.json"
         TenantBacpacUrl = "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/wingtiptenantdb.bacpac"
         GoldenTenantDatabaseName = "baseTenantDB"
-        CatalogDatabaseName = "customercatalog"
+        CatalogDatabaseName = "tenantcatalog"
         CatalogServerNameStem = "catalog-"
-        TenantServerNameStem = "customers1-"
+        TenantServerNameStem = "tenants1-"
         TenantPoolNameStem = "Pool"
-        CatalogShardMapName = "customercatalog"
+        CatalogShardMapName = "tenantcatalog"
         CatalogAdminUserName = "developer"
         CatalogAdminPassword = "P@ssword1"
         TenantAdminUserName = "developer"
@@ -66,25 +44,25 @@ function Get-Configuration
         AdhocAnalyticsBacpacUrl = "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/adhoctenantanalytics.bacpac"
         StorageKeyType = "SharedAccessKey"
         StorageAccessKey = (ConvertTo-SecureString -String "?" -AsPlainText -Force)
-        DefaultVenueType = "MultiPurposeVenue"
+        DefaultVenueType = "multipurpose"
         TenantNameBatch = @(
             ("Poplar Dance Academy","DanceStudio"),
-            ("Blue Oak Jazz Club","BluesClub"),
-            ("Juniper Jammers Jazz","JazzClub"),
-            ("Sycamore Symphony","ClassicalConcertHall"),
-            ("Hornbeam HipHop","DanceStudio"),
-            ("Mahogany Soccer","SoccerClub"),
-            ("Lime Tree Track","MotorRacing"),
-            ("Balsam Blues Club","BluesClub"),
-            ("Tamarind Studio","DanceStudio"),
-            ("Star Anise Judo", "JudoClub"),
-            ("Cottonwood Concert Hall","ClassicalConcertHall"),
-            ("Mangrove Soccer Club","SoccerClub"),
-            ("Foxtail Rock","RockMusicVenue"),
-            ("Osage Opera","Opera"),
-            ("Papaya Players","SoccerClub"),
-            ("Magnolia Motor Racing","MotorRacing"),
-            ("Sorrel Soccer","SoccerClub")       
+            ("Blue Oak Jazz Club","blues"),
+            ("Juniper Jammers Jazz","jazz"),
+            ("Sycamore Symphony","classicalmusic"),
+            ("Hornbeam HipHop","dance"),
+            ("Mahogany Soccer","soccer"),
+            ("Lime Tree Track","motorracing"),
+            ("Balsam Blues Club","blues"),
+            ("Tamarind Studio","dance"),
+            ("Star Anise Judo", "judo"),
+            ("Cottonwood Concert Hall","classicalmusic"),
+            ("Mangrove Soccer Club","soccer"),
+            ("Foxtail Rock","rockmusic"),
+            ("Osage Opera","opera"),
+            ("Papaya Players","soccer"),
+            ("Magnolia Motor Racing","motorracing"),
+            ("Sorrel Soccer","soccer")       
             )
         }
     return $configuration

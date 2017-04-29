@@ -25,7 +25,7 @@ param(
 $ErrorActionPreference = "Stop" 
 
 Import-Module $PSScriptRoot\..\..\Common\SubscriptionManagement -Force
-Import-Module $PSScriptRoot\..\..\AppVersionSpecific -Force
+Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 
 $config = Get-Configuration
 
@@ -152,7 +152,7 @@ $commandText = "
     SET QUOTED_IDENTIFIER OFF;
 
     GO
-    CREATE EXTERNAL TABLE [dbo].[Venues] (
+    CREATE EXTERNAL TABLE [dbo].[Venue] (
         [VenueName] NVARCHAR (50) NOT NULL,
         [VenueType] CHAR (30) NOT NULL,
         [AdminEmail] NCHAR (30) NOT NULL,

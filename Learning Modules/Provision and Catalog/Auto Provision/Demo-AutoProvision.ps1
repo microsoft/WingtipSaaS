@@ -1,7 +1,7 @@
 ﻿# Demo script for enabling auto-provisioning.  Deploys the catalog management app service and creates its service principal. 
 # This app service hosts the web jobs that provide automated catalog management functions, which must be manually deployed. 
 
-$DemoScenario = 1
+$DemoScenario = 0
 <# Select the demo scenario that will be run. 
      Demo   Scenario
       0       None
@@ -15,7 +15,7 @@ $DemoScenario = 1
 
 #Import-Module "$PSScriptRoot\..\Common\CatalogAndDatabaseManagement" -Force
 Import-Module "$PSScriptRoot\..\..\Common\SubscriptionManagement" -Force
-Import-Module "$PSScriptRoot\..\..\AppVersionSpecific" -Force
+Import-Module "$PSScriptRoot\..\..\WtpConfig" -Force
 Import-Module "$PSScriptRoot\..\..\UserConfig" -Force
 
 # Get Azure credentials if not logged on. Use -Force to login again and optionally select a different subscription 

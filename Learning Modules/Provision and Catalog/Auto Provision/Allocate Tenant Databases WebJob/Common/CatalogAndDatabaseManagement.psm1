@@ -4,12 +4,14 @@
   It simplifies catalog management by focusing on operations done to a tenant and tenant databases.
 #>
 
-Import-Module $PSScriptRoot\..\AppVersionSpecific -Force
+Import-Module $PSScriptRoot\..\WtpConfig -Force
+Import-Module $PSScriptRoot\..\ProvisionConfig -Force
 Import-Module $PSScriptRoot\AzureShardManagement -Force
 Import-Module sqlserver -ErrorAction SilentlyContinue
 
 # Stop execution on error
 $ErrorActionPreference = "Stop"
+
 
 <#
 .SYNOPSIS
@@ -57,6 +59,7 @@ function Add-ExtendedTenantMetaDataToCatalog
         -QueryTimeout 30 `
 }
 
+
 <#
 .SYNOPSIS
     Registers a tenant database in the catalog, including adding the tenant name as extended tenant meta data.
@@ -99,11 +102,11 @@ function Add-TenantDatabaseToCatalog
         -TenantName $TenantName
 }
 
+
 <#
 .SYNOPSIS
     Finds names of tenants that match an input string.
 #>
-
 function Find-TenantNames
 {
     param(
@@ -195,6 +198,7 @@ function Get-Catalog
         return $catalog
     }
 }
+
 
 <#
 .SYNOPSIS
@@ -297,6 +301,7 @@ function Get-ExtendedDatabase{
     return $extendedDatabases
 }
 
+
 <#
 .SYNOPSIS
     Gets extended elastic pool meta data from the catalog
@@ -391,6 +396,7 @@ function Get-ExtendedServer{
     return $extendedServers
 }
 
+
 <#
 .SYNOPSIS
   Validates and normalizes the name for use in creating the tenant key and database name. Removes spaces and sets to lowercase.
@@ -406,9 +412,10 @@ function Get-NormalizedTenantName
     return $TenantName.Replace(' ','').ToLower()
 }
 
+
 <#
 .SYNOPSIS
-    Returns a Tenant object for a specific tenant key is registered.
+    Returns a Tenant object for a specific tenant key if registered.
 #>
 function Get-Tenant
 {
@@ -449,6 +456,7 @@ function Get-Tenant
 
     return $tenant            
 }
+
 
 <#
 .SYNOPSIS
@@ -526,6 +534,7 @@ function Get-TenantDatabaseForRestorePoint
     }
 }
 
+
 <#
 .SYNOPSIS
     Retrieves the server and database name for each database registered in the catalog.
@@ -539,6 +548,37 @@ function Get-TenantDatabaseLocations
     # return all databases registered in the catalog shard map
     return Get-Shards -ShardMap $Catalog.ShardMap
 }
+
+
+<#
+.SYNOPSIS
+    Returns an integer tenant key from a normalized tenant name for use in the catalog.
+#>
+function Get-TenantKey
+{
+    param
+    (
+        # Tenant name 
+        [parameter(Mandatory=$true)]
+        [String]$TenantName
+    )
+
+    $normalizedTenantName = $TenantName.Replace(' ', '').ToLower()
+
+    # Produce utf8 encoding of tenant name 
+    $utf8 = New-Object System.Text.UTF8Encoding
+    $tenantNameBytes = $utf8.GetBytes($normalizedTenantName)
+
+    # Produce the md5 hash which reduces the size
+    $md5 = new-object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
+    $tenantHashBytes = $md5.ComputeHash($tenantNameBytes)
+
+    # Convert to integer for use as the key in the catalog 
+    $tenantKey = [bitconverter]::ToInt32($tenantHashBytes,0)
+
+    return $tenantKey
+}
+
 
 <#
 .SYNOPSIS
@@ -556,7 +596,7 @@ function Get-TenantNameFromTenantDatabase
 
     $config = Get-Configuration
 
-    $commandText = "Select Top 1 VenueName from Venues"
+    $commandText = "Select Top 1 VenueName from Venue"
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $TenantServerFullyQualifiedName `
@@ -567,6 +607,7 @@ function Get-TenantNameFromTenantDatabase
         -ConnectionTimeout 30 `
         -QueryTimeout 30 `
 }
+
 
 <#
 .SYNOPSIS
@@ -708,19 +749,19 @@ function Initialize-TenantDatabase
     # Initialize tenant info in the tenant database (idempotent)
     $emaildomain = (Get-NormalizedTenantName $TenantName)
 
-    if ($emailDomain.Length -gt 20) 
+    if ($emailDomain.Length -gt 40) 
     {
-        $emailDomain = $emailDomain.Substring(0,20)
+        $emailDomain = $emailDomain.Substring(0,40)
     }
 
     $VenueAdminEmail = "admin@" + $emailDomain + ".com"
 
     $commandText = "
-        DELETE FROM Venues
-        INSERT INTO Venues
-            (VenueName, VenueType, AdminEmail, PostalCode, CountryCode  )
+        DELETE FROM Venue
+        INSERT INTO Venue
+            (VenueName, VenueType, AdminEmail, PostalCode, CountryCode, Lock  )
         VALUES
-            ('$TenantName', '$VenueType','$VenueAdminEmail', '$PostalCode', '$CountryCode');
+            ('$TenantName', '$VenueType','$VenueAdminEmail', '$PostalCode', '$CountryCode', 'X');
         -- reset event dates for initial default events (these exist and this reset of their dates is done for demo purposes only) 
         EXEC sp_ResetEventDates;"
 
@@ -733,6 +774,7 @@ function Initialize-TenantDatabase
         -ConnectionTimeout 30 `
         -QueryTimeout 30 `
 }
+
 
 <#
 .SYNOPSIS
@@ -794,6 +836,7 @@ function Invoke-SqlAzure{
     return $results  
 }
 
+
 <#
 .SYNOPSIS
     Wraps Invoke-SqlAzure. Retries on any error with exponential back-off policy.  
@@ -849,7 +892,6 @@ function Invoke-SqlAzureWithRetry{
         }
     }while (1 -eq 1)
 }
-
 
 
 <#
@@ -1019,16 +1061,11 @@ function New-TenantDatabase
         [parameter(Mandatory=$false)]
         [string]$CountryCode = 'USA',
 
-        [parameter(Mandatory=$false)]
+        [parameter(Mandatory=$true)]
         [string]$WtpUser
     )
 
     $config = Get-Configuration
-
-    if ($config.DeployByCopy -and !$WtpUser)
-    {
-        throw "Must provide a value for -WtpUser if Get-Configuration DeployByCopy = $true."
-    }
 
     if(!$VenueType) {$VenueType = $config.DefaultVenueType}
 
@@ -1099,6 +1136,7 @@ function New-TenantDatabase
         -DatabaseName $normalizedTenantName
 }
 
+
 <#
 .SYNOPSIS
     Opens tenant-related resources in the portal.
@@ -1147,6 +1185,7 @@ function Open-TenantResourcesInPortal
     }
 }
 
+
 <#
 .SYNOPSIS
     Removes tenant info from local shard map
@@ -1178,6 +1217,7 @@ function Remove-CatalogInfoFromTenantDatabase
         -Query $commandText `
 }
 
+
 <#
 .SYNOPSIS
     Deletes extended database metadata from the catalog.
@@ -1192,7 +1232,6 @@ function Remove-ExtendedDatabase
         [string]$DatabaseName
     )
 
-    # Delete the database data from the Tenants table
     $commandText = "
         DELETE FROM Databases 
         WHERE DatabaseName = $DatabaseName;"
@@ -1206,6 +1245,7 @@ function Remove-ExtendedDatabase
         -ConnectionTimeout 30 `
         -QueryTimeout 30 `
 }
+
 
 <#
 .SYNOPSIS
@@ -1223,8 +1263,6 @@ function Remove-ExtendedElasticPool{
         [string]$ElasticPoolName
     )
 
-    Import-Module $PSScriptRoot\..\AppVersionSpecific -Force
-
     $config = Get-Configuration
 
     $commandText = "
@@ -1240,6 +1278,7 @@ function Remove-ExtendedElasticPool{
         -ConnectionTimeout 30 `
         -QueryTimeout 15     
 }
+
 
 <#
 .SYNOPSIS
@@ -1267,6 +1306,7 @@ function Remove-ExtendedServer
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText 
 }
+
 
 <#
 .SYNOPSIS
@@ -1308,8 +1348,6 @@ function Remove-ExtendedTenant
         -Password $config.CatalogAdminPassword `
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 30 `
 }
 
 
@@ -1371,6 +1409,7 @@ function Remove-Tenant
         -DatabaseName $tenantShard.Location.Database 
 }
 
+
 <#
 .SYNOPSIS
     This deletes the active database for tenant while leaving the tenant mapping untouched in the catalog.
@@ -1411,6 +1450,7 @@ function Remove-TenantDatabaseForRestore
     return $deletedTenantDatabase
 }
 
+
 <#
 .SYNOPSIS
     Renames a database 
@@ -1437,7 +1477,6 @@ function Rename-Database
         -Password $config.TenantAdminPassword `
         -ServerInstance ($tenantServerName + ".database.windows.net") `
         -Database "master" `
-        -ConnectionTimeout 30 `
         -Query $commandText `
 
     # Poll to check if database rename is complete and rename has been reflected in ARM
@@ -1547,9 +1586,8 @@ function Set-ExtendedDatabase {
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText `
         -UserName $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 15 
+        -Password $config.CatalogAdminPassword
+
 }
 
 
@@ -1570,7 +1608,6 @@ function Set-ExtendedElasticPool{
 
     )
 
-    Import-Module $PSScriptRoot\..\ProvisionConfig -Force
     $provisionConfig = Get-ProvisionConfiguration
 
     $commandText = "
@@ -1607,11 +1644,10 @@ function Set-ExtendedElasticPool{
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText `
         -UserName $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 15 
-
+        -Password $config.CatalogAdminPassword
 }
+
+
 <#
 .SYNOPSIS
     Adds an extended server entry to the catalog
@@ -1624,8 +1660,6 @@ function Set-ExtendedServer {
         [parameter(Mandatory=$true)]
         [object]$Server
     )
-
-    Import-Module $PSScriptRoot\..\ProvisionConfig -Force
 
     $provisionConfig = Get-ProvisionConfiguration
    
@@ -1645,11 +1679,8 @@ function Set-ExtendedServer {
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText `
         -UserName $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 15 
+        -Password $config.CatalogAdminPassword
 }
-
 
 
 <#
@@ -1675,6 +1706,7 @@ function Set-TenantOffline
     }
 }
 
+
 <#
 .SYNOPSIS
     Marks a tenant as online in the Wingtip tickets tenant catalog
@@ -1692,7 +1724,6 @@ function Set-TenantOnline
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
 
-
     # Detect any differences between local and global shard map -accomodates case where database has been restored while offline
     $shardMapMismatches = $recoveryManager.DetectMappingDifferences($tenantMapping.Shard.Location, $Catalog.ShardMap.Name)
 
@@ -1708,6 +1739,7 @@ function Set-TenantOnline
        ($Catalog.ShardMap).MarkMappingOnline($tenantMapping) >$null
     }
 }
+
 
 <#
 .SYNOPSIS
@@ -1725,7 +1757,6 @@ function Test-TenantKeyInCatalog
 
     try
     {
-
         ($Catalog.ShardMap).GetMappingForKey($tenantKey) > $null
         return $true
     }
@@ -1734,6 +1765,7 @@ function Test-TenantKeyInCatalog
         return $false
     }
 }
+
 
 <#
 .SYNOPSIS
@@ -1760,6 +1792,7 @@ function Test-LegalName
     return $true
 }
 
+
 <#
 .SYNOPSIS
     Validates a name fragment contains only legal characters
@@ -1783,6 +1816,7 @@ function Test-LegalNameFragment
         [string]$Input
     )
 }
+
 
 <#
 .SYNOPSIS
@@ -1808,6 +1842,11 @@ function Test-LegalVenueTypeName
     )
 }
 
+
+<#
+.SYNOPSIS
+    Validates a venue type name contains only legal characters
+#>
 function Test-ValidVenueType
 {
     param(
@@ -1843,9 +1882,7 @@ function Test-ValidVenueType
                     -Username $config.TenantAdminuserName `
                     -Password $config.TenantAdminPassword `
                     -Database $Catalog.Database.DatabaseName `
-                    -Query $commandText `
-                    -ConnectionTimeout 30 `
-                    -QueryTimeout 30 `
+                    -Query $commandText
 
     if($results.Count -ne 1)
     {

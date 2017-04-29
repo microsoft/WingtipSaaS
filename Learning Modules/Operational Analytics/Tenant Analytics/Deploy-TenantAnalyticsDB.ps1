@@ -20,7 +20,7 @@ Import-Module $PSScriptRoot\..\..\Common\SubscriptionManagement -Force
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
 Initialize-Subscription
 
-Import-Module $PSScriptRoot\..\..\AppVersionSpecific -Force
+Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 
 $config = Get-Configuration
 

@@ -23,7 +23,7 @@ Param (
 
 Import-Module AzureRM.Resources
 Import-Module "$PSScriptRoot\..\..\Common\SubscriptionManagement" -Force
-Import-Module "$PSScriptRoot\..\..\AppVersionSpecific" -Force
+Import-Module "$PSScriptRoot\..\..\WtpConfig" -Force
 Import-Module "$PSScriptRoot\..\..\UserConfig" -Force
 
 # Get Azure credentials if not already logged on.

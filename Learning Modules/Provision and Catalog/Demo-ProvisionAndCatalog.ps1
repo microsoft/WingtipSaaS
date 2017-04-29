@@ -7,13 +7,12 @@
 $TenantName = "Red Maple Racing"
 
 # The type of venue. Needed when adding a tenant 
-$VenueType = "MotorRacing"
+$VenueType = "motorracing"
 # Supported venue types: BluesClub, ClassicalConcertHall, DanceStudio, JazzClub, JudoClub, MotorRacing, MultiPurposeVenue, Opera, RockMusicVenue, SoccerClub 
 
-$DemoScenario = 3
+$DemoScenario = 1
 <# Select the demo scenario to run
     Demo    Scenario
-      0       None
       1       Provision a single tenant
       2       Remove a provisioned tenant
       3       Provision a batch of tenants
@@ -23,7 +22,6 @@ $DemoScenario = 3
 
 Import-Module "$PSScriptRoot\..\Common\CatalogAndDatabaseManagement" -Force
 Import-Module "$PSScriptRoot\..\Common\SubscriptionManagement" -Force
-Import-Module "$PSScriptRoot\..\AppVersionSpecific" -Force
 Import-Module "$PSScriptRoot\..\UserConfig" -Force
 
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
@@ -32,12 +30,6 @@ Initialize-Subscription -NoEcho
 # Get the resource group and user names used when the WTP application was deployed from UserConfig.psm1.  
 $wtpUser = Get-UserConfig
 
-### Default state - enter a valid demo scenaro 
-if ($DemoScenario -eq 0)
-{
-  Write-Output "Please modify the demo script to select a scenario to run."
-  exit
-}
 
 ### Provision a single tenant
 if ($DemoScenario -eq 1)

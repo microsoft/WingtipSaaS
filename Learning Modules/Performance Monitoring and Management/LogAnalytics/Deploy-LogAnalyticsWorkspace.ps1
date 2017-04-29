@@ -25,7 +25,7 @@ param(
 $ErrorActionPreference = "Stop" 
 
 Import-Module $PSScriptRoot\..\..\Common\SubscriptionManagement -Force
-Import-Module $PSScriptRoot\..\..\AppVersionSpecific -Force
+Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 Import-Module AzureRm.OperationalInsights 
 
 
