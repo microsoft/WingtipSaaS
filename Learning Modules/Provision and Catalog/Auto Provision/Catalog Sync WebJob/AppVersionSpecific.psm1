@@ -49,7 +49,7 @@ function Get-Configuration
         CatalogShardMapName = "customercatalog"
         CatalogAdminUserName = "developer"
         CatalogAdminPassword = "P@ssword1"
-        TenantAdminUserName = "developer"
+        TenantAdminUsername = "developer"
         TenantAdminPassword = "P@ssword1"
         CatalogManagementAppNameStem = "catalogmanagement-"
         CatalogManagementAppSku = "standard"
