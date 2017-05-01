@@ -8,7 +8,7 @@ $TenantName = "Red Maple Racing"
 
 # The type of venue. Needed when adding a tenant 
 $VenueType = "motorracing"
-# Supported venue types: BluesClub, ClassicalConcertHall, DanceStudio, JazzClub, JudoClub, MotorRacing, MultiPurposeVenue, Opera, RockMusicVenue, SoccerClub 
+# Supported venue types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer 
 
 $DemoScenario = 1
 <# Select the demo scenario to run

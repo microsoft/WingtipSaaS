@@ -1,4 +1,4 @@
-﻿# WebJob script that synchronizes extended database meta data in the catalog with the current state of the system.
+﻿# Catalog Sync: script that synchronizes extended database meta data in the catalog with the current state of the system.
 
 # IMPORTANT: script + supporting modules, dlls is intended to  be deployed as a continuous Web Job.
 
@@ -73,7 +73,7 @@ $location = $catalog.Database.Location
 
 ## ---------------------------------------------------------------------------------------
 
-Write-Output "Synchronizing databases with catalog at $synchInterval second intervals..."
+Write-Output "Synchronizing databases with catalog at $interval second intervals..."
 
 # start the web job continuous execution loop.  The web job sleeps between each iteration.  
 # Job is stateless across loops - all resource-related variables are initialized in each iteration.

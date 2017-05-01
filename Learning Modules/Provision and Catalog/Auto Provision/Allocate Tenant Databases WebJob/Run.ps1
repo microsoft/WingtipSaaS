@@ -65,22 +65,23 @@ While (1 -eq 1)
     $commandText = "
         SELECT TenantName, VenueType, ServicePlan, PostalCode, CountryCode, Location FROM [dbo].[TenantRequests]
         WHERE RequestState = 'submitted'"
-    
-    $requests = Invoke-SqlAzureWithRetry `
+    $requests = @()
+    $requests += Invoke-SqlAzureWithRetry `
                     -ServerInstance $Catalog.FullyQualifiedServerName `
                     -Username $config.CatalogAdminUserName `
                     -Password $config.CatalogAdminPassword `
                     -Database $catalog.Database.DatabaseName `
                     -Query $commandText
                     
-    if ($requests)
-    {
+    if ($requests.Count -gt 0)
+    {        
+
         # get available buffer databases in the requested region
         $bufferDatabases = Find-AzureRmResource `
                             -ResourceGroupNameEquals $wtpUser.ResourceGroupName `
                             -ResourceNameContains $provisionConfig.BufferDatabaseNameStem `
                             -ResourceType Microsoft.Sql/servers/databases `
-                            -ODataQuery "Location eq '$($request.Location)'"
+                            -ODataQuery "Location eq '$($requests[0].Location)'"
         
         if ($bufferDatabases)
         {                       
@@ -89,6 +90,14 @@ While (1 -eq 1)
             
             foreach($request in $requests)
             {
+                # verify requested tenant is not already registered in catalog
+                $tenantKey = Get-TenantKey -TenantName $request.TenantName
+                if (Test-TenantKeyInCatalog -Catalog $catalog -TenantKey $tenantKey)
+                {
+                    write-output "Tenant '$($request.TenantName)' is already registered" 
+                    continue
+                }
+
                 # get a buffer database and allocate it to the requesting tenant
                 $nextBufferDatabase = $bufferDatabases | select-object -first 1
 
@@ -103,7 +112,7 @@ While (1 -eq 1)
                     > $null
 
                 # and remove the buffer database from set of available databases this iteration
-                $bufferDatabases.Remove($nextBufferDatabase)
+                $bufferDatabases.Remove($nextBufferDatabase) > $null
 
                 # update new tenant request to indicate tenant has been successfully allocated
                 $commandText = "
@@ -117,7 +126,6 @@ While (1 -eq 1)
                     -Password $config.CatalogAdminPassword `
                     -Database $catalog.Database.DatabaseName `
                     -Query $commandText
-
             }
         }        
         else

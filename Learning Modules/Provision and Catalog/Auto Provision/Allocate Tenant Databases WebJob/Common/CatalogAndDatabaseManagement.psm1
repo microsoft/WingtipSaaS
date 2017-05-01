@@ -1454,7 +1454,7 @@ function Remove-TenantDatabaseForRestore
 
 <#
 .SYNOPSIS
-    Renames a database 
+    Renames a database. Returns when rename is verified complete in ARM. 
 #>
 function Rename-Database
 {
@@ -1471,7 +1471,7 @@ function Rename-Database
 
     $tenantServerName = $SourceDatabase.Name.Split('/',2)[0]
     $sourceDatabaseName = $SourceDatabase.Name.Split('/',2)[1]
-    $commandText = "ALTER DATABASE [$sourceDatabaseName] MODIFY NAME = [$TargetDatabaseName];"
+    $commandText = "ALTER DATABASE [$sourceDatabaseName] MODIFY Name = [$TargetDatabaseName];"
 
     Invoke-SqlAzureWithRetry `
         -Username $config.TenantAdminUserName `
