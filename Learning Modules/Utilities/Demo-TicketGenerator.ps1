@@ -10,6 +10,6 @@ Initialize-Subscription -NoEcho
 $wtpUser = Get-UserConfig
 
 ### (Re)generate tickets for all tenants.  The last event in each tenant will have no tickets and can be deleted.
-& $PSScriptRoot\TicketGenerator.ps1 `
+& $PSScriptRoot\TicketGenerator2.ps1 `
     -WtpResourceGroupname $WtpUser.ResourceGroupName `
     -WtpUser $WtpUser.Name
