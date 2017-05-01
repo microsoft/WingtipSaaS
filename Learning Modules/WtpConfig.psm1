@@ -46,7 +46,7 @@ function Get-Configuration
         StorageAccessKey = (ConvertTo-SecureString -String "?" -AsPlainText -Force)
         DefaultVenueType = "multipurpose"
         TenantNameBatch = @(
-            ("Poplar Dance Academy","DanceStudio"),
+            ("Poplar Dance Academy","dance"),
             ("Blue Oak Jazz Club","blues"),
             ("Juniper Jammers Jazz","jazz"),
             ("Sycamore Symphony","classicalmusic"),

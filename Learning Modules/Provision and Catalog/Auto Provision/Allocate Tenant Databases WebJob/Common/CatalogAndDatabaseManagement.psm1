@@ -685,6 +685,7 @@ function Initialize-TenantFromBufferDatabase
     }
  
     $tenantDatabaseName = Get-NormalizedTenantName -TenantName $TenantName
+    $serverName = $BufferDatabase.Name.Split("/",2)[0]
 
     # rename the buffer database and allocate it to this tenant
     $tenantDatabase = Rename-Database `
@@ -693,7 +694,7 @@ function Initialize-TenantFromBufferDatabase
 
     # initialize the database for the tenant with venue type and other info from the request
     Initialize-TenantDatabase `
-            -ServerName $ServerName `
+            -ServerName $serverName `
             -DatabaseName $tenantDatabaseName `
             -TenantName $TenantName `
             -VenueType $VenueType `
@@ -1469,8 +1470,8 @@ function Rename-Database
     $config = Get-Configuration
 
     $tenantServerName = $SourceDatabase.Name.Split('/',2)[0]
-      
-    $commandText = "ALTER DATABASE [$($SourceDatabase.DatabaseName)] MODIFY NAME = [$TargetDatabaseName];"
+    $sourceDatabaseName = $SourceDatabase.Name.Split('/',2)[1]
+    $commandText = "ALTER DATABASE [$sourceDatabaseName] MODIFY NAME = [$TargetDatabaseName];"
 
     Invoke-SqlAzureWithRetry `
         -Username $config.TenantAdminUserName `

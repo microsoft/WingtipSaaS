@@ -6,7 +6,7 @@
 function Get-ProvisionConfiguration
 {
     $config = @{`
-        ServerNameStem = 'customers'
+        ServerNameStem = 'tenants'
         ServerElasticPoolsMax = 2
         ElasticPoolNameStem = 'Pool'
         ElasticPoolEdition = 'Standard'

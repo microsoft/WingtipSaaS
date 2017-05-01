@@ -7,8 +7,8 @@
 function Get-UserConfig {
 
     $userConfig = @{`
-        ResourceGroupName = "<resourcegroup>"    # the resource group used when the WTP application was deployed. CASE SENSITIVE
-        Name =              "<user>"             # the User name entered when the WTP application was deployed  
+        ResourceGroupName = "wtp-bgc"    # the resource group used when the WTP application was deployed. CASE SENSITIVE
+        Name =              "bgc"             # the User name entered when the WTP application was deployed  
     }
 
     if ($userConfig.ResourceGroupName -eq "<resourcegroup>" -or $userConfig.Name -eq "<user>")

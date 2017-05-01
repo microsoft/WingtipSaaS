@@ -40,43 +40,86 @@ $catalog = Get-Catalog -ResourceGroupName $WtpResourceGroupName -WtpUser $WtpUse
 
 ## Functions
 
+function Get-PaddedNumber
+{
+    param ([int] $Number)
+
+    if ($Number -lt 10) {return "000$Number"}
+    if ($number -lt 100) {return "00$Number"}
+    if ($Number -lt 1000) {return "0$Number"}
+    return $Number.ToString()        
+}
+
 function Get-CurvedSalesForDay 
 {
     param 
     (
     [object] $Curve,
 
-    #[range 1..60]
-    [int] $Day
+    [validaterange(1,60)]
+    [int] $Day,
+
+    [int] $Seats
 
     )
-        
-    if ($Day -eq 1)
+    
+    [decimal] $curvePercent = 0   
+    
+    if ($Day -eq 1) { $curvePercent = $Curve.1 } 
+    elseif ($Day -le 5) { $curvePercent = ($Curve.5 / 4) }   
+    elseif ($Day -le 10) { $curvePercent = ($Curve.10 / 5) }     
+    elseif ($Day -le 15) { $curvePercent = ($Curve.15 / 5) }
+    elseif ($Day -le 20) { $curvePercent = ($Curve.20 / 5) }
+    elseif ($Day -le 25) { $curvePercent = ($Curve.25 / 5) }
+    elseif ($Day -le 30) { $curvePercent = ($Curve.30 / 5) }
+    elseif ($Day -le 35) { $curvePercent = ($Curve.35 / 5) }    
+    elseif ($Day -le 40) { $curvePercent = ($Curve.40 / 5) }
+    elseif ($Day -le 45) { $curvePercent = ($Curve.45 / 5) }
+    elseif ($Day -le 50) { $curvePercent = ($Curve.50 / 5) }
+    elseif ($Day -le 55) { $curvePercent = ($Curve.55 / 5) }
+    else { $curvePercent = ($Curve.60 / 5) }
+
+    # add some random variation
+    [decimal] $variance = (-10, -8, -5, -4, -2, 0, 2, 4, 5, 8, 10) | Get-Random 
+    $curvePercent = $curvePercent + ($curvePercent * $variance/100)
+    
+    [decimal]$sales = ($curvePercent * $Seats / 100)
+
+    [int]$roundedSales = [math]::Ceiling($sales)
+
+    return $roundedSales 
+}
+
+function Get-VenueCurves
+{
+    param(
+        [string] $Venue,
+
+        [object] $Curves
+    )
+       
+
+    if ($Venue -eq 'contosoconcerthall')
     {
-        return $Curve.$Day
-    } 
-    if ($Day -le 5)
-    {
-        return ($Curve.5 / 4) 
-    }   
-    elseif($Day -le 10)
-    {
-        return ($Curve.10 / 5)
-    }     
-    elseif($Day -le 15)
-    {
-        return ($Curve.10 / 5)
+        # popular
+        $VenueCurves = $Curves.MadRush,$Curves.Rush,$Curves.SShaped,$Curves.FastBurn, $Curves.StraightLine
     }
-    elseif($Day -le 20)
+    elseif ($Venue -eq 'fabrikamjazzclub')
     {
-        return ($Curve.20 / 5)
+        # moderate
+        $VenueCurves = $Curves.Rush,$Curves.SShaped,$Curves.StraightLine, $Curves.LastMinute
     }
-    elseif($Day -le 25)
+    elseif ($Venue -eq 'dogwooddojo')
     {
-        return ($Curve.25 / 5)
+        # less popular
+        $VenueCurves = $Curves.QuickFizzle,$Curves.SShaped,$Curves.StraightLine, $Curves.SlowBurn,$Curves.LastMinute
+    }
+    else
+    {
+        $VenueCurves = $Curves
     }
 
-
+    return $VenueCurves
 }
 
 ## MAIN SCRIPT ## ----------------------------------------------------------------------------
@@ -101,7 +144,12 @@ $fictitiousNames = Import-Csv -Path ("$PSScriptRoot\FictitiousNames.csv") -Heade
 $fictitiousNames = {$fictitiousNames}.Invoke()
 $customerCount = $fictitiousNames.Count
 $postalCodes = Import-Csv -Path ("$PSScriptRoot\SeattleZonedPostalCodes.csv") -Header ("Zone","PostalCode")
-$curves = Import-Csv -Path ("$PSScriptRoot\WtpSalesCurves1.csv") #-Header ("Curve","1", "5","10","15","20","25","30","35","40","45","50","55","60") 
+$importCurves = Import-Csv -Path ("$PSScriptRoot\WtpSalesCurves1.csv") -Header ("Curve","1", "5","10","15","20","25","30","35","40","45","50","55","60")
+$curves = @{}
+foreach ($importCurve in $importCurves) 
+{
+    $curves += @{$importCurve.Curve = $importCurve}
+}
 
 # set up SQl script for creating fictious customers, same people will be used for all venues and events
 $customersSql  = "
@@ -119,16 +167,7 @@ $CustomerId = 0
 while ($fictitiousNames.Count -gt 0) 
 {
     # get a name at random then remove from the list
-    if ($fictitiousNames.Count -gt 1)
-    {
-        $index = Get-Random -Minimum 0  -Maximum ($fictitiousNames.Count - 1)
-    }
-    else
-    {
-        $index = 0
-    }
-
-    $name = $fictitiousNames[$index]
+    $name = $fictitiousNames | Get-Random
     $fictitiousNames.Remove($name) > $null
 
     $firstName = $name.FirstName.Replace("'","").Trim()
@@ -143,7 +182,7 @@ while ($fictitiousNames.Count -gt 0)
     $email = $alias + "@outlook.com"
 
     # randomly assign a postal code
-    $postalCode = ($postalCodes[(Get-Random -Minimum 0 -Maximum ($postalCodes.Count - 1))]).PostalCode
+    $postalCode = ($postalCodes | Get-Random).PostalCode
 
     $customerId ++
 
@@ -163,6 +202,9 @@ $totalTickets = 0
 
 foreach ($venue in $venues)
 {
+    Write-Output "Purchasing tickets for $($venue.Location.Database)"
+    $venueTickets = 0
+
     # add customers to the venue
     $results = Invoke-SqlAzureWithRetry `
                 -Username "$AdminUserName" -Password "$AdminPassword" `
@@ -177,8 +219,9 @@ foreach ($venue in $venues)
     $tBatch = 1
     $tpBatch = 1
     
-    # iitialize SQL batches for tickets and ticket purchases
-    $ticketSql += "INSERT INTO [dbo].[Tickets] ([RowNumber],[SeatNumber],[EventId],[SectionId],[TicketPurchaseId]) VALUES `n"
+    # initialize SQL batches for tickets and ticket purchases
+    $ticketSql = "
+        INSERT INTO [dbo].[Tickets] ([RowNumber],[SeatNumber],[EventId],[SectionId],[TicketPurchaseId]) VALUES `n"
     $ticketPurchaseSql = `
        "SET IDENTITY_INSERT [dbo].[TicketPurchases] ON
         INSERT INTO [dbo].[TicketPurchases] ([TicketPurchaseId],[CustomerId],[PurchaseDate],[PurchaseTotal]) VALUES`n" 
@@ -189,7 +232,7 @@ foreach ($venue in $venues)
 
     # set relative popularity of sections from config or assign  
 
-    # get total number of seats
+    # get total number of seats in venue
     $command = "SELECT SUM(SeatRows * SeatsPerRow) AS TotalSeats FROM Sections"        
     $totalSeats = Invoke-SqlAzureWithRetry `
                 -Username "$AdminUserName" -Password "$AdminPassword" `
@@ -207,6 +250,8 @@ foreach ($venue in $venues)
 
     foreach ($event in $events) 
     {
+        $eventTickets = 0
+
         # get seating sections and prices for this event
         $command = "
             SELECT s.SectionId, s.SectionName, SeatRows, SeatsPerRow, es.Price
@@ -220,13 +265,12 @@ foreach ($venue in $venues)
                     -Database $venue.Location.Database `
                     -Query $command
 
-        # process sections to create array of seats
+        # process sections to create collections of seats from which purchased tickets will be drawn
         $seating = @{}
         $sectionNumber = 1
         foreach ($section in $sections)
         {
-            $sectionSeating = @()
-            $sectionSeating = {$sectionSeating}.Invoke()
+            $sectionSeating = @{}
 
             for ($row = 1;$row -le $section.SeatRows;$row++)
             {
@@ -239,9 +283,9 @@ foreach ($venue in $venues)
                                 SeatNumber = $seatNumber
                                 Price = $section.Price
                                 }
- 
-                    $sectionSeating += $seat 
-                   
+                    
+                    $index = "$(Get-PaddedNumber $row)/$(Get-PaddedNumber $seatNumber)" 
+                    $sectionSeating += @{$index = $seat}                    
                 }
             }           
 
@@ -254,312 +298,181 @@ foreach ($venue in $venues)
         # set event popularity (likelihood of sellout) 
 
         # assign a sales curve for this event from the set associated with this venue
-        $curve = $curves[0]
+        $venueCurves = Get-VenueCurves -Venue $venue.Location.Database -Curves $curves
+        $curve = $venueCurves | Get-Random
 
         # set the tickets to be sold based on event popularity and relative popularity of sections
 
         # ticket sales start date as (event date - 60)
-        $ticketStart = $event.Date
+        $ticketStart = $event.Date.AddDays(-60)
+
+        $today = Get-Date
 
         # loop over 60 day sales period          
         for($day = 1; $day -le 60 ; $day++)  
         {
-            $purchaseDate = $ticketStart.AddDays($day-1)
-
-            # find the number of tickets to purchase today based on the curved percent for the day
-            [int]$percentSalesThisDay = Get-CurvedSalesForDay -Curve $curve -Day $day
-            [int]$ticketsToPurchase = $percentSalesThisDay * $totalSeats.TotalSeats / 100
-            
-            # buy tickets
-            $ticketsPurchased = 0            
-            while ($ticketsPurchased -le $ticketsToPurchase)
+            # stop selling tickets when all sold 
+            if ($eventTickets -ge $totalSeats.TotalSeats) 
             {
-                # pick customer at random
+                break
+            }
+ 
+            $purchaseDate = $ticketStart.AddDays($day)
+
+            # stop selling tickets after today
+            if ($purchaseDate -gt $today)
+            {
+                break
+            }
+
+            # use the curve to find the number of tickets to purchase for this day
+            [int]$ticketsToPurchase = Get-CurvedSalesForDay -Curve $curve -Day $day -Seats $totalSeats.TotalSeats
+            
+            # if no tickets to sell this day, skip this day
+            if ($ticketsToPurchase -eq 0) 
+            {
+                continue
+            } 
+
+            $ticketsPurchased = 0            
+            while ($ticketsPurchased -lt $ticketsToPurchase -and $seating.Count -gt 0 )
+            {
+                # buy tickets on a customer-by-customer basis
+
+                # pick random customer Id
                 $customerId = Get-Random -Minimum 1 -Maximum $customerCount  
                 
-                # determine number of tickets customer wants to purchase (1-6 per person)
-                $ticketOrder = Get-Random -Minimum 1 -Maximum 6
+                # pick number of tickets to purchase (2-10 per person)
+                $ticketOrder = Get-Random -Minimum 2 -Maximum 10
                 
-                $PurchaseTotal = 0
-                    
-                # pick seats based on remaining available seats, relative popularity of sections 
-                
-                $seatingAssigned = $false
-                
-                while ($seatingAssigned -eq $false)
+                # ensure ticket order does not cause purchases to exceed tickets to buy for this day
+                $remainingTicketsToBuyThisDay = $ticketsToPurchase - $ticketsPurchased
+                if ($Ticketorder -gt $remainingTicketsToBuyThisDay)
                 {
-                    # select seating section (could extend here to bias by section popularity)
-                    if ($sections.Count -eq 1)
-                    {
-                        $preferredSectionSeating = $seating.1
-                    }
-                    else
-                    {
-                        $preferredSectionSeating = $seating.(Get-Random -Minimum 1 -Maximum ($sections.Count))
-                    }
-
-                    #determine if seats available or try another section
-                    if ($preferredSectionSeating.Count -ge $ticketOrder)
-                    {
-                        #assign seats
-                        for ($s = 1;$s -le $ticketOrder; $s++)
-                        {
-                            # add ticket to tickets batch
-                            $purchasedSeat = $preferredSectionSeating[$s]
-
-                            $mins = Get-Random -Maximum 1440 -Minimum 0
-                            $purchaseDate = $purchaseDate.AddMinutes(-$mins)
-
-                            $PurchaseTotal += $purchasedSeat.Price
-
-                            if($tBatch -ge 1000)
-                            {
-                                # finalize current INSERT and start new INSERT statements
-                                
-                                
-                                $ticketSql = $ticketSql.TrimEnd((" ",",","`n")) + ";`n`n"
-                     
-                                $ticketSql += "INSERT INTO [dbo].[Tickets] ([RowNumber],[SeatNumber],[EventId],[SectionId],[TicketPurchaseId]) VALUES `n"
-                            
-                                $tBatch = 0
-                            }
-
-                            $ticketSql += "($($purchasedSeat.Row),$($purchasedSeat.SeatNumber),$($event.EventId),$($section.SectionId),$ticketPurchaseId)"
-
-                            # remove seat from set of available seats
-                            $preferredSectionSeating.Remove($purchasedSeat) 
-                        }
-                        
-                        $seatingAssigned = $true
-
-                        $ticketPurchaseSql += "($ticketPurchaseId,$CustomerId,$purchaseDate,$PurchaseTotal)"
-
-                        $ticketPurchaseId ++
-
-                    }
-                    
+                    $ticketOrder = $remainingTicketsToBuyThisDay
                 }
 
-                # add ticket sales details to batch of tickets to be generated
+                # select seating section (could extend here to bias by section popularity)
+                $preferredSectionSeatingKey = $seating.Keys | Get-Random 
+                $preferredSectionSeating = $seating.$preferredSectionSeatingKey
+                
+                # modify customer order if insufficient seats available in the chosen section (not so realistic but ensures all seats sold quickly)
+                if ($ticketOrder -gt $preferredSectionSeating.Count)
+                {
+                    $ticketOrder = $preferredSectionSeating.Count
+                }
+
+                $PurchaseTotal = 0                                  
+
+                # assign seats from the chosen section
+                $seatingAssigned = $false                
+                while ($seatingAssigned -eq $false)
+                {
+                    # assign seats to this order
+                    for ($s = 1;$s -le $ticketOrder; $s++)
+                    {
+                        $purchasedSeatKey = $preferredSectionSeating.Keys| Sort | Select-Object -First 1 
+                        $purchasedSeat = $preferredSectionSeating.$purchasedSeatKey
+
+                        # set time of day of purchase - distributed randomly over prior 24 hours
+                        $mins = Get-Random -Maximum 1440 -Minimum 0
+                        $purchaseDate = $purchaseDate.AddMinutes(-$mins)
+
+                        $PurchaseTotal += $purchasedSeat.Price
+                        $ticketsPurchased ++
+                        
+                        # add ticket to tickets batch
+
+                        # max of 1000 inserts per batch
+                        if($tBatch -ge 1000)
+                        {
+                            # finalize current INSERT and start new INSERT statements and reset batch counter                                                                
+                            $ticketSql = $ticketSql.TrimEnd((" ",",","`n")) + ";`n`n"                     
+                            $ticketSql += "INSERT INTO [dbo].[Tickets] ([RowNumber],[SeatNumber],[EventId],[SectionId],[TicketPurchaseId]) VALUES `n"                            
+                            $tBatch = 0
+                        }
+
+                        $ticketSql += "($($purchasedSeat.Row),$($purchasedSeat.SeatNumber),$($event.EventId),$($purchasedSeat.SectionId),$ticketPurchaseId),`n"
+                        $tBatch ++
+
+                        # remove seat from available seats when sold
+                        $preferredSectionSeating.Remove($purchasedSeatKey)
+                        
+                        # remove section when sold out
+                        if ($preferredSectionSeating.Count -eq 0)
+                        {
+                            $seating.Remove($preferredSectionSeatingKey)
+                        }                       
+                                                 
+                    }
+                    # add ticket purchase to batch
+                    if($tpBatch -ge 1000)
+                    {
+                        # finalize current INSERT and start new INSERT statements and reset batch counter                                                                
+                        $ticketPurchaseSql = $ticketPurchaseSql.TrimEnd((" ",",","`n")) + ";`n`n"                     
+                        $ticketPurchaseSql += "INSERT INTO [dbo].[TicketPurchases] ([TicketPurchaseId],[CustomerId],[PurchaseDate],[PurchaseTotal]) VALUES`n"
+                        $tpBatch = 0
+                    }
+
+                    $ticketPurchaseSql += "($ticketPurchaseId,$CustomerId,'$purchaseDate',$PurchaseTotal),`n"
+                    $tpBatch ++
+                    
+                    $seatingAssigned = $true
+                    $ticketPurchaseId ++                                        
+                }
 
                 $totalTicketPurchases ++
-                $totalTickets += $ticketsPurchased
+                $totalTickets += $ticketOrder
+                $eventTickets += $ticketOrder
+                $venueTickets += $ticketOrder
 
-
-            }                                   
-
+            # per customer purchases
+            }
+                                   
+        # daily purchases
         }
 
+        Write-Output "$eventTickets tickets purchased for event $($event.EventName)"
+
+    # per event purchases
     }
+
+    Write-Output "$venueTickets tickets purchased for venue $($venue.Location.Database)"
+
+    # Finalize the batched SQL commands for this venue and execute
+
+    Write-Output "Inserting TicketPurchases to $($venue.Location.Database)" 
+        
+    $ticketPurchaseSql = $ticketPurchaseSql.TrimEnd((" ",",","`n")) + ";"
+    $ticketPurchaseSql += "`nSET IDENTITY_INSERT [dbo].[TicketPurchases] OFF"
+
+    $ticketPurchasesExec = Invoke-Sqlcmd `
+        -Username "$AdminUserName" `
+        -Password "$AdminPassword" `
+        -ServerInstance $venue.Location.Server `
+        -Database $venue.Location.Database `
+        -Query $ticketPurchaseSql `
+        -ConnectionTimeout 30 `
+        -QueryTimeout 120 `
+        -EncryptConnection
+
+    Write-Output "Inserting tickets for $($venue.Location.Database)" 
+               
+    $ticketSql = $ticketSql.TrimEnd((" ",",","`n")) + ";"
+
+    $ticketsExec = Invoke-Sqlcmd `
+        -Username "$AdminUserName" `
+        -Password "$AdminPassword" `
+        -ServerInstance $venue.Location.Server `
+        -Database $venue.Location.Database `
+        -Query $ticketSql `
+        -ConnectionTimeout 30 `
+        -QueryTimeout 120 `
+        -EncryptConnection
+    
+# per venue purchases
 
 }
 
 Write-Output "$totalTicketPurchases TicketPurchases total"
 Write-Output "$totalTickets Tickets total"
-
-
-
-    # Initialize SQL command variables for ticket generation
-                                                
-    $command = "SELECT SectionName FROM [dbo].[Sections]"        
-    $Sections = Invoke-Sqlcmd `
-                    -Username "$AdminUserName" -Password "$AdminPassword" `
-                    -ServerInstance $db.Location.Server `
-                    -Database $db.Location.Database `
-                    -Query $command `
-                    -ConnectionTimeout 30 -QueryTimeout 30 -EncryptConnection `
-                    -ErrorAction Stop
-
-    $command = "SELECT EventName FROM [dbo].[Events]"        
-    $Events = Invoke-Sqlcmd `
-                -Username "$AdminUserName" -Password "$AdminPassword" `
-                -ServerInstance $db.Location.Server `
-                -Database $db.Location.Database `
-                -Query $command `
-                -ConnectionTimeout 30 -QueryTimeout 30 -EncryptConnection       
-
-    # for ticket purchases (TODO VERIFY AND THEN REMOVE COMMENTED)
-    $tpCommand = `
-        "SET IDENTITY_INSERT [dbo].[TicketPurchases] ON
-        INSERT INTO [dbo].[TicketPurchases] ([TicketPurchaseId],[CustomerId],[PurchaseDate],[PurchaseTotal]) VALUES`n" 
-        
-    # TicketPurchaseId 
-    $tpId = 1
-
-    # for tickets
-    $tCommand = "INSERT INTO [dbo].[Tickets] ([RowNumber],[SeatNumber],[EventId],[SectionId],[TicketPurchaseId]) VALUES `n" 
-
-    # counter for batches of values included in an INSERT statement
-    $iValues = 1 
-         
-    # set the tickets sales % for this db, based on the sales % and sales % variation
-    $venueSalesPercentVariation = (Get-Random -Maximum $salesPercentVariation -Minimum 0)
-    if ((Get-Random -Maximum 10 -Minimum 0) -gt 5) 
-    {
-            $venueSalesPercent = $SalesPercent + $venueSalesPercentVariation
-             
-            if ($venueSalesPercent -gt 100) 
-            {
-                $venueSalesPercent = 100
-            }
-    }
-    else
-    {
-        $venueSalesPercent = $SalesPercent - $venueSalesPercentVariation
-    }
-         
-    # initialize Tickets, TicketPurchases and Customers tables and then insert customers
-
-    $command = "`
-        DELETE FROM [dbo].[Tickets]
-        DELETE FROM [dbo].[TicketPurchases]
-        DELETE FROM [dbo].[Customers]
-        SET IDENTITY_INSERT [dbo].[Customers] ON 
-        INSERT INTO [dbo].[Customers] 
-            ([CustomerId],[FirstName],[LastName],[Email],[PostalCode],[CountryCode]) 
-            VALUES `n     "
-
-    $i = 1
-
-    # Extend here to provide varied postal codes, countries for customers 
-    $PostalCode = "98052"
-    $CountryCode = "USA"
-
-    foreach($fName in $fictiousNames)
-    {        
-        $email = ($fName.FirstName + "." + $fName.LastName + "@outlook.com").ToLower()
-
-        $command += "($i,'$($fName.FirstName)','$($fName.LastName)','$email','$PostalCode','$CountryCode'),`n     "
-
-        $i++       
-    }
-
-    $command = $command.TrimEnd(("`n",","," ")) + ";`nSET IDENTITY_INSERT [dbo].[Customers] OFF"
-
-    $customersExec = Invoke-Sqlcmd -Username "$AdminUserName" -Password "$AdminPassword" -ServerInstance $fullyQualifiedServerName -Database $db.DatabaseName -Query $command -ConnectionTimeout 30 -QueryTimeout 30 -EncryptConnection
-        
-    # get the event sections and seating capacity for all events in this venue except the last one 
-    $command = "`
-        DECLARE @eventCount int
-        SET @eventCount = (SELECT count(*) FROM events) - 1
-        SELECT e.EventId,e.Date as EventDate, es.SectionId,s.SeatRows,s.SeatsPerRow,es.Price 
-            FROM dbo.eventsections AS es 
-            INNER JOIN dbo.sections AS s ON es.SectionId = s.SectionId 
-            INNER JOIN dbo.Events as e ON e.EventId = es.EventId
-            WHERE e.EventId in
-                (SELECT top (@EventCount) EventId FROM dbo.Events ORDER BY Date)"
-        
-    $eventSections = Invoke-Sqlcmd -Username "$AdminUserName" -Password "$AdminPassword" -ServerInstance $fullyQualifiedServerName -Database $db.DatabaseName -Query $command -ConnectionTimeout 30 -QueryTimeout 30 -EncryptConnection
-
-    if ($eventSections)
-    {
-        foreach($eventSection in $eventSections)
-        {
-            # for all rows and then for some (randomly selected) seats per row, create ticket purchases for randomly selected customers            
-
-            for ($iRow=1; $iRow -le $eventSection.SeatRows; $iRow++)
-            {
-                for($iSeat=1; $iSeat -le $eventSection.SeatsPerRow; $iSeat++)
-                {
-                    $seatRandomizer = Get-Random -Maximum 100 -Minimum 0
-
-                    if($seatRandomizer -le $venueSalesPercent)
-                    {
-                        # buy a ticket for this seat, otherwise, try next seat...  
-                        # each ticket is bought 1 per ticket purchase
-                        # pick a purchase date
-                        
-                        # determine if event is in the future
-                        if ($eventSection.EventDate.ToUniversalTime() -gt (Get-Date).ToUniversalTime())
-                        {
-                            # if so calculate offset in days plus margin
-                            $offset = ($eventSection.EventDate.ToUniversalTime() - (Get-Date).ToUniversalTime()).Days + 1
-                        }
-                        
-                        If ($offset -le 1) {$offset = 1}
-
-                        # set ticket purchase date to a point between today and 90 days prior to the event 
-                        $days = Get-Random -Maximum 90 -Minimum $offset
-                        $purchaseDate = $eventSection.EventDate.AddDays(-$days)
-
-                        # randomize the purchase time                        
-                        $mins = Get-Random -Maximum 1440 -Minimum 0
-                        $purchaseDate = $purchaseDate.AddMinutes(-$mins)
-
-                        # pick the customer at random
-                        $randomCustomer = Get-Random -Maximum $fictiousNames.Count -Minimum 1
-
-                        if($iValues -ge 1000)
-                        {
-                            # finalize current INSERT and start new INSERT statements
-                                
-                            $tpCommand = $tpCommand.TrimEnd((" ",",","`n")) + ";`n`n"                               
-
-                            #$tpCommand += "SET IDENTITY_INSERT [dbo].[TicketPurchases] OFF `n`nSET IDENTITY_INSERT [dbo].[TicketPurchases] ON `n"
-
-                            $tpCommand += "INSERT INTO [dbo].[TicketPurchases] ([TicketPurchaseId],[CustomerId],[PurchaseDate],[PurchaseTotal]) VALUES`n" 
-                                
-                            $tCommand = $tCommand.TrimEnd((" ",",","`n")) + ";`n`n"
-                     
-                            $tCommand += "INSERT INTO [dbo].[Tickets] ([RowNumber],[SeatNumber],[EventId],[SectionId],[TicketPurchaseId]) VALUES `n"  
-
-                            
-                            $iValues = 0
-                        }
-
-                        # add the ticket purchase to the values being inserted
-                        $tpCommand += "    ($tpId,$randomCustomer,'$purchaseDate',$($eventSection.Price)),`n"
-                        
-                        # add the ticket to the values being inserted
-                        $tCommand += "    ($iRow,$iSeat,$($eventSection.EventId),$($eventSection.SectionId),$tpId),`n"
-
-                        $iValues ++
-
-                        $tpId ++
-
-                    }                                       
-                }                
-            }
-        }
-       
-        # Finalize the commands and execute
-
-        Write-Output "Adding $tpId TicketPurchases for $($db.DatabaseName)" 
-        
-        $tpCommand = $tpCommand.TrimEnd((" ",",","`n")) + ";"
-
-        #$tpCommand += "SET IDENTITY_INSERT [dbo].[TicketPurchases] OFF"
-
-        $ticketPurchasesExec = Invoke-Sqlcmd `
-            -Username "$AdminUserName" `
-            -Password "$AdminPassword" `
-            -ServerInstance $fullyQualifiedServerName `
-            -Database $db.DatabaseName `
-            -Query $tpCommand `
-            -ConnectionTimeout 30 `
-            -QueryTimeout 120 `
-            -EncryptConnection
-
-        Write-Output "Adding $tpId Tickets for $($db.DatabaseName)" 
-               
-        $tCommand = $tCommand.TrimEnd((" ",",","`n")) + ";"
-
-        $ticketsExec = Invoke-Sqlcmd `
-            -Username "$AdminUserName" `
-            -Password "$AdminPassword" `
-            -ServerInstance $fullyQualifiedServerName `
-            -Database $db.DatabaseName `
-            -Query $tCommand `
-            -ConnectionTimeout 30 `
-            -QueryTimeout 120 `
-            -EncryptConnection
-
-        $totalTicketPurchases += $tpId
-        $totalTickets += $tpId 
-    }       
-    else
-    {
-        Write-Output "No events exist in $($db.DatabaseName)"
-    }
-
-
