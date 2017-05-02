@@ -33,6 +33,7 @@ $WtpUser = $WtpUser.ToLower()
 
 Import-Module $PSScriptRoot\..\Common\SubscriptionManagement -Force
 Import-Module $PSScriptRoot\..\Common\CatalogAndDatabaseManagement -Force
+Import-Module $PSScriptRoot\..\WtpConfig -Force
 
 $config = Get-Configuration
 $serverName = $config.TenantServerNameStem + $WtpUser 

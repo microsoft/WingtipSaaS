@@ -22,6 +22,7 @@ $DemoScenario = 1
 
 Import-Module "$PSScriptRoot\..\Common\CatalogAndDatabaseManagement" -Force
 Import-Module "$PSScriptRoot\..\Common\SubscriptionManagement" -Force
+Import-Module "$PSScriptRoot\..\WtpConfig" -Force -Verbose
 Import-Module "$PSScriptRoot\..\UserConfig" -Force
 
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
@@ -30,6 +31,8 @@ Initialize-Subscription -NoEcho
 # Get the resource group and user names used when the WTP application was deployed from UserConfig.psm1.  
 $wtpUser = Get-UserConfig
 
+# get the WTP app configuration
+$config = Get-Configuration
 
 ### Provision a single tenant
 if ($DemoScenario -eq 1)

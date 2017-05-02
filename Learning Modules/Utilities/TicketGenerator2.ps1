@@ -18,16 +18,7 @@ Param
 	# The user name used entered during deployment
 	[Parameter(Mandatory=$true)]
 	[String]
-	$WtpUser,
-
-	# The baseline sales % for an event - approx % of tickets to be sold
-	[Parameter(Mandatory=$false)]
-    [int]$salesPercent = 80,
-
-    # The variation (+/-) % for ticket sales, gives impression that there is variation in interest in events
-	[Parameter(Mandatory=$false)]
-    [int]$salesPercentVariation = 20
-
+	$WtpUser
 )
 Import-Module "$PSScriptRoot\..\Common\SubscriptionManagement"
 Import-Module "$PSScriptRoot\..\Common\CatalogAndDatabaseManagement" -Force

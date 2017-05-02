@@ -173,7 +173,7 @@ function Get-Catalog
 
     if (!$shardmapManager)
     {
-        throw "Failed to initialize shard map manager from '$catalogDatabaseName' database. Ensure catalog is initialized with Demo Assistant app and try again."
+        throw "Failed to initialize shard map manager from '$(config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
     }
 
     # Initialize shard map
@@ -184,7 +184,7 @@ function Get-Catalog
 
     If (!$shardMap)
     {
-        throw "Failed to load shard map '$shardMapName' from '$catalogDatabaseName' database. Ensure catalog is initialized with Demo Assistant app and try again."
+        throw "Failed to load shard map '$($config.CatalogShardMapName)' from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
     }
     else
     {
