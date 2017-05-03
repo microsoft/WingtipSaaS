@@ -11,6 +11,11 @@ function Get-UserConfig {
         Name =              "<user>"             # the User name entered when the WTP application was deployed  
     }
 
+
+
+    ##  DO NOT CHANGE VALUES BELOW HERE -------------------------------------------------------------
+
+   
     if ($userConfig.ResourceGroupName -eq "<resourcegroup>" -or $userConfig.Name -eq "<user>")
     {
         throw '$userConfig.ResourceGroupName and $userConfig.Name are not set.  Modify both values in UserConfig.psm1 and try again.'

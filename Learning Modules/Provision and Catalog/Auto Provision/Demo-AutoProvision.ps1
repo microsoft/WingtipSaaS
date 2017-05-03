@@ -1,11 +1,11 @@
 ﻿# Demo script for enabling auto-provisioning.  Deploys the catalog management app service and creates its service principal. 
 # This app service hosts the web jobs that provide automated catalog management functions, which must be manually deployed. 
 
-$DemoScenario = 0
+$DemoScenario = 1
 <# Select the demo scenario that will be run. 
      Demo   Scenario
       0       None
-      1       Deploy the Catalog Management App Service and create its service principal in AAD used for the jobs
+      1       Deploy the Catalog Management App Service and create its service principal in AAD
       2       Display Tenant Id and Subscription Id - required to initialize the web jobs
       3       Submit a request to provision a single tenant
       4       Submit a batch of tenant provisioning requests  
