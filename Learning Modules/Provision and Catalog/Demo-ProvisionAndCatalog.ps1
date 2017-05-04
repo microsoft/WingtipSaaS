@@ -53,9 +53,6 @@ if ($DemoScenario -eq 1)
 
     Write-Output "Provisioning complete for tenant '$TenantName'"
 
-    # Open the admin page for the new venue
-    Start-Process "http://admin.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
-
     # Open the events page for the new venue
     Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
     
