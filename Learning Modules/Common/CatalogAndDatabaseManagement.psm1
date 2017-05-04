@@ -1313,7 +1313,7 @@ function Remove-ExtendedServer
 
 <#
 .SYNOPSIS
-    Removes extended tenant and associated database meta data entries from catalog  
+    Removes extended tenant entry from catalog  
 #>
 function Remove-ExtendedTenant
 {
@@ -1341,9 +1341,13 @@ function Remove-ExtendedTenant
     # Delete the tenant name from the Tenants table
     $commandText = "
         DELETE FROM Tenants 
-        WHERE TenantId = $rawkeyHexString;
+        WHERE TenantId = $rawkeyHexString;"
+
+    <# extend deletion behavior by uncommenting below if the database has been extended with resource tables 
+    $commandText += "
         DELETE FROM Databases 
         WHERE ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';"
+    #>
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
