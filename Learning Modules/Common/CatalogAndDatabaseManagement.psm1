@@ -807,32 +807,41 @@ function Invoke-SqlAzure{
         [Parameter(Mandatory=$false)]
         [int] $QueryTimeout = 60
       )
-    $Query = $Query.Trim()
+    
+    # Trim all whitespace in query
+    $Query = $Query.Split([Environment]::NewLine, [System.StringSplitOptions]::RemoveEmptyEntries) | foreach{$_.Trim()}
 
     $connectionString = `
         "Data Source=$ServerInstance;Initial Catalog=$DatabaseName;Connection Timeout=$ConnectionTimeOut;User ID=$UserName;Password=$Password;Encrypt=true;"
 
     $connection = new-object system.data.SqlClient.SQLConnection($connectionString)
-    $command = new-object system.data.sqlclient.sqlcommand($Query,$connection)
-    $command.CommandTimeout = $QueryTimeout
-
     $connection.Open()
 
-    $reader = $command.ExecuteReader()
-    
-    $results = @()
+    # Separate multiple commands by 'GO' statement
+    $commands = [regex]::Split($Query,'\bGO')
 
-    while ($reader.Read())
+    # Execute commands and return results from last query 
+    foreach ($item in $commands)
     {
-        $row = @{}
-        
-        for ($i=0;$i -lt $reader.FieldCount; $i++)
+        $command = new-object system.data.sqlclient.sqlcommand($Query,$connection)
+        $command.CommandTimeout = $QueryTimeout
+
+        $reader = $command.ExecuteReader()
+    
+        $results = @()
+
+        while ($reader.Read())
         {
-           $row[$reader.GetName($i)]=$reader.GetValue($i)
+            $row = @{}
+            
+            for ($i=0;$i -lt $reader.FieldCount; $i++)
+            {
+               $row[$reader.GetName($i)]=$reader.GetValue($i)
+            }
+            $results += New-Object psobject -Property $row
         }
-        $results += New-Object psobject -Property $row
     }
-     
+      
     $connection.Close()
     $connection.Dispose()
     
