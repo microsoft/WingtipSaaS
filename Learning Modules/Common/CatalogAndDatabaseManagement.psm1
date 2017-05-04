@@ -1463,20 +1463,21 @@ function Rename-Database
         [parameter(Mandatory=$true)]
         [string]$TargetDatabaseName,
 
-        [parameter(Mandatory=$false)]
-        [object]$SourceDatabase = $null
+        [parameter(Mandatory=$true)]
+        [string]$SourceDatabaseName,
+
+        [parameter(Mandatory=$true)]
+        [string]$ServerName
     )
 
     $config = Get-Configuration
 
-    $tenantServerName = $SourceDatabase.Name.Split('/',2)[0]
-    $sourceDatabaseName = $SourceDatabase.Name.Split('/',2)[1]
-    $commandText = "ALTER DATABASE [$sourceDatabaseName] MODIFY Name = [$TargetDatabaseName];"
+    $commandText = "ALTER DATABASE [$SourceDatabaseName] MODIFY Name = [$TargetDatabaseName];"
 
     Invoke-SqlAzureWithRetry `
         -Username $config.TenantAdminUserName `
         -Password $config.TenantAdminPassword `
-        -ServerInstance ($tenantServerName + ".database.windows.net") `
+        -ServerInstance ($ServerName + ".database.windows.net") `
         -Database "master" `
         -Query $commandText `
 
@@ -1546,7 +1547,7 @@ function Rename-TenantDatabase
     # Rename active tenant database using T-SQL on the 'master' database
     Write-Output "Renaming SQL database '$($TenantDatabaseObject.DatabaseName)' to '$TargetDatabaseName'..."
 
-    $renamedDatabaseObject = Rename-Database -SourceDatabase $TenantDatabaseObject -TargetDatabaseName $TargetDatabaseName
+    $renamedDatabaseObject = Rename-Database -SourceDatabaseName $tenantDatabaseName -ServerName $tenantServerName -TargetDatabaseName $TargetDatabaseName
        
     return $renamedDatabaseObject
 }
