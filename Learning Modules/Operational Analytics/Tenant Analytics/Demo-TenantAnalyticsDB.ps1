@@ -9,7 +9,7 @@ Initialize-Subscription -NoEcho
 # Get the resource group and user names used when the WTP application was deployed from UserConfig.psm1.  
 $wtpUser = Get-UserConfig
 
-$DemoScenario = 0
+$DemoScenario = 2
 <# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
      Demo   Scenario
       0       None
@@ -31,7 +31,7 @@ if ($DemoScenario -eq 1)
 {
     Write-Output "Running ticket generator ..."
 
-    & $PSScriptRoot\..\..\Utilities\TicketGenerator.ps1 `
+    & $PSScriptRoot\..\..\Utilities\TicketGenerator2.ps1 `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name
     exit
