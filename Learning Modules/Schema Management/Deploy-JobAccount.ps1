@@ -40,6 +40,22 @@ $catalogServerName = $config.CatalogServerNameStem + $WtpUser
 $fullyQualfiedCatalogServerName = $catalogServerName + ".database.windows.net"
 $databaseName = $config.JobAccountDatabaseName
 
+# Check if the job account already exists and the latest Azure PowerShell SDK has been installed 
+try 
+{
+    $jobaccount = Get-AzureRmSqlJobAccount -ResourceGroupName $WtpResourceGroupName `
+        -ServerName $CatalogServerName `
+        -JobAccountName $($config.JobAccount) 
+}
+catch 
+{
+    if ($_.Exception.Message -like "*'Get-AzureRmSqlJobAccount' is not recognized*")
+    {
+        Write-Error "'Get-AzureRmSqlJobAccount' not found. Download and install the Azure PowerShell SDK that includes support for Elastic Jobs: 
+        https://github.com/jaredmoo/azure-powershell/releases"
+    }
+}
+
 # Check the job account database already exists
 $database = Get-AzureRmSqlDatabase -ResourceGroupName $WtpResourceGroupName `
 	-ServerName $catalogServerName `
@@ -67,12 +83,6 @@ catch
 	Write-Error "An error occured deploying the job account database"
 	throw
 }
-
-# Check the job account already exists
-$jobaccount = Get-AzureRmSqlJobAccount -ResourceGroupName $WtpResourceGroupName `
-    -ServerName $CatalogServerName `
-    -JobAccountName $($config.JobAccount) `
-	-ErrorAction SilentlyContinue
 
 # Create the job account if it doesn't already exist
 try
