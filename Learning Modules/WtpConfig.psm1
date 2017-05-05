@@ -18,7 +18,7 @@ function Get-Configuration
         LogAnalyticsWorkspaceNameStem = "wtploganalytics-"
         LogAnalyticsDeploymentLocation = "westcentralus"
         DatabaseAndBacpacTemplate = "databaseandbacpactemplate.json"
-        TenantBacpacUrl = "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/wingtiptenantdb.bacpac"
+        TenantBacpacUrl = "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac"
         GoldenTenantDatabaseName = "baseTenantDB"
         CatalogDatabaseName = "tenantcatalog"
         CatalogServerNameStem = "catalog-"
@@ -33,8 +33,6 @@ function Get-Configuration
         CatalogManagementAppSku = "standard"
         CatalogManagementAppSkuCode = "S1"
         CatalogManagementAppWorkerSize = 0
-        CatalogSyncWebJobNameStem = "catalogsync-"
-        AutoProvisionWebJobNameStem = "autoprovision-"
         ServicePrincipalPassword = "P@ssword1"
         JobAccount = "jobaccount"
         JobAccountDatabaseName = "jobaccount"

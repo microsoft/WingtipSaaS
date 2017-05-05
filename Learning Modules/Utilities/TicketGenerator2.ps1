@@ -72,7 +72,7 @@ function Get-CurvedSalesForDay
     else { $curvePercent = ($Curve.60 / 5) }
 
     # add some random variation
-    [decimal] $variance = (-15, -10, -8, -5, -4, 0, 5, 10) | Get-Random 
+    [decimal] $variance = (-10, -8, -5, -4, 0, 5, 10) | Get-Random 
     $curvePercent = $curvePercent + ($curvePercent * $variance/100)
 
     if ($curvePercent -lt 0) {$curvePercent = 0}
@@ -99,7 +99,7 @@ $ServerName = $config.TenantServerNameStem + $WtpUser.ToLower()
   
 <# uncomment to generate tickets for the golden databases   
 $WtpResourceGroupName = "wingtip-gold"
-$ServerName = "wingtip-customers-gold"
+$ServerName = "wingtip-tenants-gold"
 #>
 
 $FullyQualifiedServerName = $ServerName + ".database.windows.net" 
@@ -119,7 +119,7 @@ foreach ($importCurve in $importCurves)
 }
 
 # create different sets of curves that reflect different venue/event popularities 
-$popularCurves = $curves.MadRush,$curves.Rush,$curves.SShapedHigh,$curves.FastBurn, $curves.StraightLine, $curves.LastMinuteRush
+$popularCurves = $curves.MadRush,$curves.Rush,$curves.SShapedHigh,$curves.FastBurn, $curves.StraightLine, $curves.LastMinuteRush, $Curves.MediumBurn
 $moderateCurves = $Curves.Rush,$Curves.SShapedMedium, $Curves.MediumBurn, $Curves.LastMinute
 $unpopularCurves = $curves.SShapedLow, $curves.QuickFizzle, $curves.SlowBurn,$curves.LastGasp, $curves.Disappointing
 
@@ -205,7 +205,7 @@ foreach ($venue in $venues)
     # add customers to the venue
     $results = Invoke-SqlAzureWithRetry `
                 -Username "$AdminUserName" -Password "$AdminPassword" `
-                -ServerInstance $venue.Location.Server `
+                -ServerInstance $FullyQualifiedServerName `
                 -Database $venueDatabaseName `
                 -Query $customersSql 
 
@@ -228,7 +228,7 @@ foreach ($venue in $venues)
     $command = "SELECT SUM(SeatRows * SeatsPerRow) AS Capacity FROM Sections"        
     $capacity = Invoke-SqlAzureWithRetry `
                 -Username "$AdminUserName" -Password "$AdminPassword" `
-                -ServerInstance $venue.Location.Server `
+                -ServerInstance $FullyQualifiedServerName `
                 -Database $venue.Location.Database `
                 -Query $command
 
@@ -239,7 +239,7 @@ foreach ($venue in $venues)
        
     $events = Invoke-SqlAzureWithRetry `
                 -Username "$AdminUserName" -Password "$AdminPassword" `
-                -ServerInstance $venue.Location.Server `
+                -ServerInstance $FullyQualifiedServerName `
                 -Database $venue.Location.Database `
                 -Query $command 
 
@@ -277,7 +277,7 @@ foreach ($venue in $venues)
         $sections = @()
         $sections += Invoke-SqlAzureWithRetry `
                     -Username "$AdminUserName" -Password "$AdminPassword" `
-                    -ServerInstance $venue.Location.Server `
+                    -ServerInstance $FullyQualifiedServerName `
                     -Database $venue.Location.Database `
                     -Query $command
 
@@ -456,7 +456,7 @@ foreach ($venue in $venues)
     $ticketPurchasesExec = Invoke-SqlAzureWithRetry `
         -Username "$AdminUserName" `
         -Password "$AdminPassword" `
-        -ServerInstance $venue.Location.Server `
+        -ServerInstance $FullyQualifiedServerName `
         -Database $venue.Location.Database `
         -Query $ticketPurchaseSql `
         -QueryTimeout 120 
@@ -468,7 +468,7 @@ foreach ($venue in $venues)
     $ticketsExec = Invoke-SqlAzureWithRetry `
         -Username "$AdminUserName" `
         -Password "$AdminPassword" `
-        -ServerInstance $venue.Location.Server `
+        -ServerInstance $FullyQualifiedServerName `
         -Database $venue.Location.Database `
         -Query $ticketSql `
         -QueryTimeout 120 
