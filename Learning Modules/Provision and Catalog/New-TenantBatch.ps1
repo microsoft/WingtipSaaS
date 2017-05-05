@@ -118,7 +118,7 @@ foreach ($newTenant in $NewTenants)
 if ($batchDatabaseNames.Count -gt 0)
 {
 
-    Write-Output "Provisioning $($newTenantDatabaseNames.Count) databases..." 
+    Write-Output "Provisioning $($batchDatabaseNames.Count) databases..." 
     
     try
     {

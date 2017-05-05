@@ -8,7 +8,7 @@
 function Get-Configuration
 {
     $configuration = @{`
-        TemplatesLocationUrl = "https://wtpdeploystorageaccount.blob.core.windows.net/templates"
+        TemplatesLocationUrl = "https://wingtipsaas.blob.core.windows.net/templates"
         TenantDatabaseTemplate = "tenantdatabasetemplate.json"
         TenantDatabaseCopyTemplate = "tenantdatabasecopytemplate.json"
         TenantDatabaseBatchTemplate = "tenantdatabasebatchtemplate.json"
