@@ -56,6 +56,15 @@ catch
     }
 }
 
+# Check if current Azure subscription is signed up for Preview of Elastic jobs 
+$registrationStatus = Get-AzureRmProviderFeature -ProviderName Microsoft.Sql -FeatureName sqldb-JobAccounts
+
+if ($registrationStatus.RegistrationState -eq "NotRegistered")
+{
+    Write-Error "Your current subscription is not white-listed for the preview of Elastic jobs. Please contact Microsoft to white-list your subscription."
+    throw
+}
+
 # Check the job account database already exists
 $database = Get-AzureRmSqlDatabase -ResourceGroupName $WtpResourceGroupName `
 	-ServerName $catalogServerName `
