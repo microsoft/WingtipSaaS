@@ -115,6 +115,7 @@ $commandText = "
 
     GO
     CREATE EXTERNAL TABLE [dbo].[Venues] (
+        [Server] NVARCHAR(128),
         [VenueId] INT NOT NULL,
         [VenueName] NVARCHAR (50) NOT NULL,
         [VenueType] CHAR (30) NOT NULL,
@@ -166,7 +167,7 @@ $commandText = "
     "
     Write-output "Initializing schema in '$searchDatabaseName'..."
 
-    Invoke-SqlcmdWithRetry `
+    Invoke-Sqlcmd `
     -ServerInstance $fullyQualfiedCatalogServerName `
     -Username $config.CatalogAdminUserName `
     -Password $config.CatalogAdminPassword `
@@ -174,5 +175,6 @@ $commandText = "
     -Query $commandText `
     -ConnectionTimeout 30 `
     -QueryTimeout 30 `
+    -EncryptConnection
 
 Write-Output "`nDeployment of database '$searchDatabaseName' complete."

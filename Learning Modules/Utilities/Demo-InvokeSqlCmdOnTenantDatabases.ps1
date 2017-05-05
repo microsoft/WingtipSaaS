@@ -6,7 +6,7 @@ $commandText = "
     DROP VIEW IF EXISTS Venues
     GO
     CREATE VIEW Venues AS
-    SELECT Convert(int, HASHBYTES('md5',VenueName)) AS VenueId, VenueName, VenueType, AdminEmail, PostalCode, CountryCode FROM [Venue]
+    SELECT @@ServerName as Server, Convert(int, HASHBYTES('md5',VenueName)) AS VenueId, VenueName, VenueType, AdminEmail, PostalCode, CountryCode FROM [Venue]
     GO
 
     DROP VIEW IF EXISTS VenueEvents
