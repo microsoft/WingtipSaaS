@@ -15,7 +15,7 @@ $DemoScenario = 0
       0       None
       1       Purchase tickets for events at all venues
       2       Deploy operational analytics database
-	  3       Deploy operational analytics columnstore database
+      3       Deploy operational analytics columnstore database
 #>
 
 ## ------------------------------------------------------------------------------------------------
