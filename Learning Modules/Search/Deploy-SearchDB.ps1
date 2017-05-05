@@ -92,7 +92,8 @@ $commandText = "
     SET QUOTED_IDENTIFIER OFF;
     GO
 
-    CREATE EXTERNAL TABLE [dbo].[Events] (
+    CREATE EXTERNAL TABLE [dbo].[VenueEvents] (
+        [VenueId] INT NOT NULL,
         [EventId] INT NOT NULL,
         [EventName] NVARCHAR (50) NOT NULL,
         [Subtitle] NVARCHAR (50) NULL,
@@ -113,11 +114,11 @@ $commandText = "
     GO
 
     GO
-    CREATE EXTERNAL TABLE [dbo].[Venue] (
+    CREATE EXTERNAL TABLE [dbo].[Venues] (
+        [VenueId] INT NOT NULL,
         [VenueName] NVARCHAR (50) NOT NULL,
         [VenueType] CHAR (30) NOT NULL,
         [AdminEmail] VARCHAR (50) NOT NULL,
-        [AdminPassword] NCHAR (30) NULL,
         [PostalCode] CHAR (10) NULL,
         [CountryCode] CHAR (3) NOT NULL
     )

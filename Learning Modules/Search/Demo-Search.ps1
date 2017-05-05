@@ -4,7 +4,7 @@ $DemoScenario = 1
 <# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
      Demo   Scenario
       0       None
-      1       Deploy the search database that will be crawled by Azure Search 
+      1       Deploy the single database that will be crawled by Azure Search 
 #>
 
 ## ------------------------------------------------------------------------------------------------
