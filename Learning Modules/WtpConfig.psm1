@@ -36,6 +36,7 @@ function Get-Configuration
         ServicePrincipalPassword = "P@ssword1"
         JobAccount = "jobaccount"
         JobAccountDatabaseName = "jobaccount"
+        JobAccountCredentialName = "mydemocred"
         TenantAnalyticsDatabaseName = "tenantanalytics"
         AdhocAnalyticsDatabaseName = "adhocanalytics"
         AdhocAnalyticsDatabaseServiceObjective = "S0"

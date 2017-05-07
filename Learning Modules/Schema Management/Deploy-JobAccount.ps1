@@ -115,11 +115,12 @@ catch
 	throw
 }
 
+$credentialName = $config.JobAccountCredentialName
 $commandText = "
     CREATE MASTER KEY;
     GO
 
-    CREATE DATABASE SCOPED CREDENTIAL [mydemocred]
+    CREATE DATABASE SCOPED CREDENTIAL [$credentialName]
         WITH IDENTITY = N'$($config.CatalogAdminUserName)', SECRET = N'$($config.CatalogAdminPassword)';
     GO
     
@@ -160,5 +161,3 @@ $commandText = "
 	
 Write-Output "Deployment of job account database '$($config.JobAccountDatabaseName)' and job account '$($config.JobAccount)' are complete."
 
-# Open the admin page for the Contoso Concert Hall tenant to view venue types available
-Start-Process "http://admin.wtp.$WtpUser.trafficmanager.net/$($normalizedTenantName)"
