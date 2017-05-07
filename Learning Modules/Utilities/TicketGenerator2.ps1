@@ -12,13 +12,11 @@ Param
 (
 	# Resource Group Name entered during deployment 
 	[Parameter(Mandatory=$true)]
-	[String]
-	$WtpResourceGroupName,
+	[String]$WtpResourceGroupName,
 
 	# The user name used entered during deployment
 	[Parameter(Mandatory=$true)]
-	[String]
-	$WtpUser
+	[String]$WtpUser
 )
 Import-Module "$PSScriptRoot\..\Common\SubscriptionManagement"
 Import-Module "$PSScriptRoot\..\Common\CatalogAndDatabaseManagement" -Force
