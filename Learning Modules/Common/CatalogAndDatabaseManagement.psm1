@@ -994,7 +994,11 @@ function New-Tenant
         [string]$PoolName,
 
         [Parameter(Mandatory=$false)]
-        [string]$VenueType
+        [string]$VenueType,
+
+        [Parameter(Mandatory=$false)]
+        [string]$PostalCode = "98052"
+
     )
 
     $WtpUser = $WtpUser.ToLower()
@@ -1024,6 +1028,7 @@ function New-Tenant
         -ElasticPoolName $PoolName `
         -TenantName $TenantName `
         -VenueType $VenueType `
+        -PostalCode $PostalCode `
         -WtpUser $WtpUser
 
     # Register the tenant and database in the catalog

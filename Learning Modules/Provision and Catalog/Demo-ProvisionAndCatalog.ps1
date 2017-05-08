@@ -10,6 +10,9 @@ $TenantName = "Red Maple Racing"
 $VenueType = "motorracing"
 # Supported venue types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer 
 
+# Postal Code of the venue
+$PostalCode = "98052"
+
 $DemoScenario = 1
 <# Select the demo scenario to run
     Demo    Scenario
@@ -48,6 +51,7 @@ if ($DemoScenario -eq 1)
         -ServerName $serverName `
         -PoolName $poolName `
         -VenueType $VenueType `
+        -PostalCode $PostalCode `
         -ErrorAction Stop `
         > $null
 
