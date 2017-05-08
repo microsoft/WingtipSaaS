@@ -393,7 +393,7 @@ while (1 -eq 1)
         exit
     }
 
-    if ($sleepCount -ge 49)
+    if ($sleepCount -ge 59)
     {
         write-host "."
         $sleepCount = 0
