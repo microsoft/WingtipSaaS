@@ -1,9 +1,10 @@
 <#
 .SYNOPSIS
-  Copy tenant data from tenant databases to an analysis data warehouse
+  Extracts ticket sales data from a tenant database to an analysis database or data warehouse
 
 .DESCRIPTION
-  Creates an Elastic Job that copies data out of tenant databases to an analysis data warehouse 
+  Creates an Elastic Job that extracts ticket sales data from a tenant database and 
+  outputs it to an analysis database or data warehouse 
 #>
 param(
     [Parameter(Mandatory=$true)]

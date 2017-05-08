@@ -2,7 +2,7 @@
 
 <#
 .SYNOPSIS
-  Creates an Elastic job account   
+  Creates an elastic job account and associated database   
 
 .DESCRIPTION
   Creates the Job account database and then the job account. Both are created in the resource group
@@ -23,7 +23,6 @@ Import-Module "$PSScriptRoot\..\Common\SubscriptionManagement" -Force
 Import-Module "$PSScriptRoot\..\WtpConfig" -Force
 
 $config = Get-Configuration
-$TenantName = "Contoso Concert Hall"
 
 # Get Azure credentials if not already logged on. 
 Initialize-Subscription
