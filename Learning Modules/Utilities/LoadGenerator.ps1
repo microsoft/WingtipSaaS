@@ -89,6 +89,8 @@ $jobs = @{}
 ## Start job invocation loop
 
 $start = Get-Date
+
+$sleepCount = 0
 $sleep = 10
 
 Write-Output "`nStarting job execution.  Load generator will look for new databases every $sleep seconds for $durationMinutes ."
@@ -391,9 +393,18 @@ while (1 -eq 1)
         exit
     }
 
-    write-host -NoNewline "."
+    if ($sleepCount -ge 49)
+    {
+        write-host "."
+        $sleepCount = 0
+    }
+    else
+    {
+        write-host -NoNewline "."
+    }
 
     $sleeping = $true
+    $sleepCount ++
     
     Sleep $sleep
 }
