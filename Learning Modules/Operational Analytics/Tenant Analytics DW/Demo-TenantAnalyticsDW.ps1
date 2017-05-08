@@ -1,4 +1,4 @@
-﻿# Helper script for demonstrating tenant analytics scripts -deploys the Tenant Analytics database to the catalog server
+﻿# Helper script for demonstrating tenant analytics using a SQL Data Warehouse
 
 Import-Module "$PSScriptRoot\..\..\Common\SubscriptionManagement" -Force
 Import-Module "$PSScriptRoot\..\..\UserConfig" -Force
@@ -20,9 +20,9 @@ $DemoScenario = 0
      Demo   Scenario
       0       None
       1       Purchase tickets for events at all venues
-      2       Deploy operational tenant analytics DW database 
-      3       Deploy job account database
-      4       Create job to copy tenant data to data warehouse for analysis
+      2       Deploy tenant analytics data warehouse 
+      3       Deploy job account database to manage the data extract jobs
+      4       Create and run job to extract tenant data to the data warehouse for analysis
 #>
 
 ## ------------------------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ if ($DemoScenario -eq 1)
     exit
 }
 
-### Provision a DW database for operational tenant analytics results
+### Provision a Data Warehouse for tenant analytics results
 if ($DemoScenario -eq 2)
 {
     & $PSScriptRoot\Deploy-TenantAnalyticsDW.ps1 `
@@ -54,7 +54,7 @@ if ($DemoScenario -eq 2)
     exit
 }
 
-### Provision a database and a job account to manage ETL jobs
+### Deploy job account database to manage the data extract jobs
 if ($DemoScenario -eq 3)
 {
     & $PSSciptRoot\..\..\Schema Management\Deploy-JobAccount.ps1 `
@@ -63,7 +63,7 @@ if ($DemoScenario -eq 3)
     exit
 }
 
-### Start elastic job to copy tenant data from tenant database into DataWarehouse for analysis
+### Create and run job to extract tenant data to the data warehouse for analysis
 if ($DemoScenario -eq 4)
 {
     # Retrieve Wingtip default analytics server and data warehouse if no existing analytics server/datawarehouse have been provided

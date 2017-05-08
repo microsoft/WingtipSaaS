@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  Creates an Operational Tenant Analytics database for query data
+  Creates a tenant analytics database with a columnstore table for ticket analytics data.
 
 .DESCRIPTION
-  Creates the operational tenant analytics database for result sets queries from Elastic jobs. Database is created in the resource group
-  created when the WTP application was deployed.
+  Creates the tenant analytics database for result sets queries from Elastic jobs. 
+  Database is created in the resource group created when the WTP application was deployed.
 
 #>
 param(
