@@ -25,6 +25,7 @@ namespace Events_Tenant.Common.Utilities
         public string CatalogServer { get; set; }
         public string CatalogDatabase { get; set; }
         public string ServicePlan { get; set; }
+        public string CatalogServerAlias { get; set; }
     }
 
     /// <summary>
@@ -42,6 +43,7 @@ namespace Events_Tenant.Common.Utilities
         ///   <c>true</c> if [reset event dates]; otherwise, <c>false</c>.
         /// </value>
         public bool ResetEventDates { get; set; }
+        public string TenantServerAlias { get; set; }
     }
 
     /// <summary>

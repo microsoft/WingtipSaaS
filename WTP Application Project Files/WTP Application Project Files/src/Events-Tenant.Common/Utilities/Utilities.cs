@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -44,7 +45,9 @@ namespace Events_Tenant.Common.Utilities
             foreach (var tenant in tenants)
             {
                 var tenantId = GetTenantKey(tenant);
-                var result = await Sharding.RegisterNewShard(tenant, tenantId, tenantServerConfig.TenantServer, databaseConfig.DatabaseServerPort, catalogConfig.ServicePlan);
+                var userValue = tenantServerConfig.TenantServer.Split('-').Last().Split('.').First();
+                var tenantAlias = tenant + "-" + userValue + "-alias.database.windows.net";
+                var result = await Sharding.RegisterNewShard(tenant, tenantId, tenantAlias, databaseConfig.DatabaseServerPort, catalogConfig.ServicePlan);
                 if (result)
                 {
                     // resets all tenants' event dates

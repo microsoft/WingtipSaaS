@@ -198,8 +198,15 @@ namespace Events_TenantUserApp
         /// <returns></returns>
         private string GetCatalogConnectionString(CatalogConfig catalogConfig, DatabaseConfig databaseConfig)
         {
-            return
-                $"Server=tcp:{catalogConfig.CatalogServer},1433;Database={catalogConfig.CatalogDatabase};User ID={databaseConfig.DatabaseUser};Password={databaseConfig.DatabasePassword};Trusted_Connection=False;Encrypt=True;";
+            return new SqlConnectionStringBuilder()
+            {
+                DataSource = $"tcp:{catalogConfig.CatalogServerAlias},1433",
+                InitialCatalog = catalogConfig.CatalogDatabase,
+                UserID = databaseConfig.DatabaseUser,
+                Password = databaseConfig.DatabasePassword,
+                TrustServerCertificate = false,
+                Encrypt = false,
+            }.ToString();
         }
 
         /// <summary>
@@ -221,12 +228,14 @@ namespace Events_TenantUserApp
             {
                 ServicePlan = Configuration["ServicePlan"],
                 CatalogDatabase = Configuration["CatalogDatabase"],
-                CatalogServer = Configuration["CatalogServer"] + ".database.windows.net"
+                CatalogServer = Configuration["CatalogServer"] + ".database.windows.net",
+                CatalogServerAlias = Configuration["CatalogServer"] + "-alias.database.windows.net"
             };
 
             TenantServerConfig = new TenantServerConfig
             {
                 TenantServer = Configuration["TenantServer"] + ".database.windows.net",
+                TenantServerAlias = Configuration["TenantServer"] + "-alias.database.windows.net",
                 ResetEventDates = Convert.ToBoolean(Configuration["ResetEventDates"])
             };
         }
@@ -241,7 +250,7 @@ namespace Events_TenantUserApp
             var basicConnectionString = GetBasicSqlConnectionString();
             SqlConnectionStringBuilder connectionString = new SqlConnectionStringBuilder(basicConnectionString)
             {
-                DataSource = DatabaseConfig.SqlProtocol + ":" + CatalogConfig.CatalogServer + "," + DatabaseConfig.DatabaseServerPort,
+                DataSource = DatabaseConfig.SqlProtocol + ":" + CatalogConfig.CatalogServerAlias + "," + DatabaseConfig.DatabaseServerPort,
                 InitialCatalog = CatalogConfig.CatalogDatabase
             };
 
