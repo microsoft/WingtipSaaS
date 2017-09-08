@@ -101,11 +101,13 @@ function Add-TenantDatabaseToCatalog
     {
         # Get username provided during deployment 
         $wtpUser = ($Catalog.FullyQualifiedServerName -split "-(\w+).database.windows.net")[1]
+        $tenantServerAlias = $TenantDatabase.DatabaseName + "-" + $wtpUser + "-alias"
 
         # Create new alias for tenant database 
         New-AzureRmSqlServerDNSAlias `
             -ResourceGroupName $Catalog.Database.ResourceGroupName `
             -ServerDNSAliasName $tenantServerAlias `
+            -ServerName $TenantDatabase.ServerName `
             >$null
 
         $fullyQualifiedTenantServerAlias = $tenantServerAlias + ".database.windows.net"         
