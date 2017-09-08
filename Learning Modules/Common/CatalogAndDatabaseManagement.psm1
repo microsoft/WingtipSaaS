@@ -63,7 +63,7 @@ function Add-ExtendedTenantMetaDataToCatalog
 
 <#
 .SYNOPSIS
-    Registers a tenant database in the catalog, including adding the tenant name as extended tenant meta data.
+    Creates an alias for a tenant database, and registers the database in the catalog. Additionally, the tenant name is stored as extended tenant meta data.
 #>
 function Add-TenantDatabaseToCatalog
 {
@@ -78,21 +78,49 @@ function Add-TenantDatabaseToCatalog
         [int32]$TenantKey,
 
         [parameter(Mandatory=$true)]
-        [object]$TenantDatabase
+        [object]$TenantDatabase,
+
+        [parameter(Mandatory=$false)]
+        [string]$TenantAlias
     )
 
-    $tenantServerFullyQualifiedName = $TenantDatabase.ServerName + ".database.windows.net"
+    # Check if input alias exists
+    $aliasExists = $null
+    if ($TenantAlias)
+    {
+        $aliasExists = Test-ValidTenantAlias $TenantAlias
+    }
 
+    $fullyQualifiedTenantServerAlias = $null
+    if ($aliasExists)
+    {
+        $fullyQualifiedTenantServerAlias = $TenantAlias + ".database.windows.net"
+    }
+    # Create new alias if input alias does not exist 
+    else
+    {
+        # Get username provided during deployment 
+        $wtpUser = ($Catalog.FullyQualifiedServerName -split "-(\w+).database.windows.net")[1]
+
+        # Create new alias for tenant database 
+        New-AzureRmSqlServerDNSAlias `
+            -ResourceGroupName $Catalog.Database.ResourceGroupName `
+            -ServerDNSAliasName $tenantServerAlias `
+            >$null
+
+        $fullyQualifiedTenantServerAlias = $tenantServerAlias + ".database.windows.net"         
+    }
+   
     # Add the database to the catalog shard map (idempotent)
     Add-Shard -ShardMap $Catalog.ShardMap `
-        -SqlServerName $tenantServerFullyQualifiedName `
+        -SqlServerName $fullyQualifiedTenantServerAlias `
         -SqlDatabaseName $TenantDatabase.DatabaseName
 
     # Add the tenant-to-database mapping to the catalog (idempotent)
     Add-ListMapping `
         -KeyType $([int]) `
         -ListShardMap $Catalog.ShardMap `
-        -SqlServerName $tenantServerFullyQualifiedName `
+        -SqlServerName $fullyQualifiedTenantServerAlias `
         -SqlDatabaseName $TenantDatabase.DatabaseName `
         -ListPoint $TenantKey
 
@@ -1883,4 +1911,28 @@ function Test-ValidVenueType
     }
 
     return $true
+}
+
+<#
+.SYNOPSIS
+    Validates that an input server alias for a tenant is active. Returns true if the alias exists, false otherwise
+#>
+function Test-ValidTenantAlias
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [string]$TenantAlias
+    )
+
+    $tenantServer = (nslookup $TenantAlias)[6].trim()
+
+    if ($tenantServer)
+    {
+        return $true
+    }
+    else
+    {
+        return $false    
+    }
+    
 }
