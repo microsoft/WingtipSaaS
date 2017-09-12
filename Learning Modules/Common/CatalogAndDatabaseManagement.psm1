@@ -63,7 +63,7 @@ function Add-ExtendedTenantMetaDataToCatalog
 
 <#
 .SYNOPSIS
-    Creates an alias for a tenant database, and registers the database in the catalog. Additionally, the tenant name is stored as extended tenant meta data.
+    Registers the tenant database in the catalog using the input alias. Additionally, the tenant name is stored as extended tenant meta data.
 #>
 function Add-TenantDatabaseToCatalog
 {
@@ -84,35 +84,8 @@ function Add-TenantDatabaseToCatalog
         [string]$TenantAlias
     )
 
-    # Check if input alias exists
-    $aliasExists = $null
-    if ($TenantAlias)
-    {
-        $aliasExists = Test-ValidTenantAlias $TenantAlias
-    }
-
-    $fullyQualifiedTenantServerAlias = $null
-    if ($aliasExists)
-    {
-        $fullyQualifiedTenantServerAlias = $TenantAlias + ".database.windows.net"
-    }
-    # Create new alias if input alias does not exist 
-    else
-    {
-        # Get username provided during deployment 
-        $wtpUser = ($Catalog.FullyQualifiedServerName -split "-(\w+).database.windows.net")[1]
-        $tenantServerAlias = $TenantDatabase.DatabaseName + "-" + $wtpUser + "-alias"
-
-        # Create new alias for tenant database 
-        New-AzureRmSqlServerDNSAlias `
-            -ResourceGroupName $Catalog.Database.ResourceGroupName `
-            -ServerDNSAliasName $tenantServerAlias `
-            -ServerName $TenantDatabase.ServerName `
-            >$null
-
-        $fullyQualifiedTenantServerAlias = $tenantServerAlias + ".database.windows.net"         
-    }
-   
+    $fullyQualifiedTenantServerAlias = $TenantAlias + ".database.windows.net"
+    
     # Add the database to the catalog shard map (idempotent)
     Add-Shard -ShardMap $Catalog.ShardMap `
         -SqlServerName $fullyQualifiedTenantServerAlias `
@@ -185,8 +158,11 @@ function Get-Catalog
     )
     $config = Get-Configuration
 
-    $catalogServerName = $config.CatalogServerNameStem + $WtpUser
-    $catalogServerFullyQualifiedName = $catalogServerName + ".database.windows.net"
+    # Get DNS alias for catalog server 
+    $catalogAlias = $config.CatalogServerNameStem + $WtpUser + "-alias.database.windows.net"
+    
+    # Resolve alias to current catalog server 
+    $catalogServerName = Get-TenantServerNameFromAlias $catalogAlias
 
     # Check catalog database exists
     $catalogDatabase = Get-AzureRmSqlDatabase `
@@ -197,7 +173,7 @@ function Get-Catalog
 
     # Initialize shard map manager from catalog database
     [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMapManager]$shardMapManager = Get-ShardMapManager `
-        -SqlServerName $catalogServerFullyQualifiedName `
+        -SqlServerName $catalogAlias `
         -UserName $config.CatalogAdminUserName `
         -Password $config.CatalogAdminPassword `
         -SqlDatabaseName $config.CatalogDatabaseName
@@ -222,7 +198,7 @@ function Get-Catalog
         $catalog = New-Object PSObject -Property @{
             ShardMapManager=$shardMapManager
             ShardMap=$shardMap
-            FullyQualifiedServerName = $catalogServerFullyQualifiedName
+            FullyQualifiedServerName = $catalogAlias
             Database = $catalogDatabase
             }
 
@@ -249,7 +225,8 @@ function Get-DatabasesForTenant
     $tenantDatabaseList = @()
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($tenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = ($tenantMapping.Shard.Location.Server).Split('.')[0]
+    $tenantServerAlias = $tenantMapping.Shard.Location.Server 
+    $tenantServerName = Get-TenantServerNameFromAlias $tenantServerAlias
 
     # Get active tenant database 
     $activeTenantDatabase = Get-AzureRmSqlDatabase `
@@ -468,7 +445,8 @@ function Get-Tenant
         throw "Tenant '$TenantName' not found in catalog."
     }
 
-    $tenantServerName = $tenantShard.Shard.Location.Server.Split('.',2)[0]
+    $tenantAlias = $tenantShard.Shard.Location.Server
+    $tenantServerName = Get-TenantServerNameFromAlias $tenantAlias
     $tenantDatabaseName = $tenantShard.Shard.Location.Database
 
     # requires tenant resource group is same as catalog resource group
@@ -491,6 +469,48 @@ function Get-Tenant
 
 <#
 .SYNOPSIS
+    Returns a unique DNS alias that points to the server a tenant's data is stored in
+#>
+function Get-TenantAlias
+{
+    param
+    (
+        [parameter(Mandatory=$true)]
+        [string]$ResourceGroupName,
+
+        [Parameter(Mandatory=$true)]
+        [string]$WtpUser,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantName,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantServerName       
+    )
+
+    $requestedTenantAlias = $null
+    $requestedTenantAlias = (Get-NormalizedTenantName $TenantName) + "-" + $WtpUser + "-alias"
+
+    # Check if input alias exists
+    $aliasExists = Test-TenantAlias $requestedTenantAlias    
+    if ($aliasExists)
+    {
+        Write-Verbose "An alias already exists for tenant '$TenantName'."
+    }    
+    else
+    {
+        # Create new alias if input alias does not exist 
+        New-AzureRmSqlServerDNSAlias `
+            -ResourceGroupName $ResourceGroupName `
+            -ServerDNSAliasName $requestedTenantAlias `
+            -ServerName $TenantServerName `
+            >$null               
+    }
+    return $requestedTenantAlias
+}
+
+<#
+.SYNOPSIS
     Returns the database that was active for a given tenant at the input time.
 #>
 function Get-TenantDatabaseForRestorePoint
@@ -510,7 +530,8 @@ function Get-TenantDatabaseForRestorePoint
     $restorePointDatabase = $null 
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($tenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = ($tenantMapping.Shard.Location.Server).Split('.')[0]
+    $tenantAlias = $tenantMapping.Shard.Location.Server
+    $tenantServerName = Get-TenantServerNameFromAlias $tenantAlias
     
     # Get active database for tenant 
     $tenantDatabase = Get-AzureRmSqlDatabase `
@@ -670,6 +691,25 @@ function Get-TenantRawKey
     return $tenantRawKey
 }
 
+<#
+.SYNOPSIS
+    Returns the active tenant server for an input alias. Throws an error if the input alias does not exist
+#>
+function Get-TenantServerNameFromAlias
+{
+    param
+    (
+        [parameter(Mandatory=$true)]
+        [string]$TenantAlias
+    )
+
+    # Perform NSLookup of DNS Alias and return the Azure SQL Server it's pointing to 
+    $fullyQualifiedServerName = (nslookup $TenantAlias)[6].trim()
+    
+    $serverName = $fullyQualifiedServerName.split('.')[0]
+    return $serverName
+}
+
 
 <#
 .SYNOPSIS
@@ -734,12 +774,21 @@ function Initialize-TenantFromBufferDatabase
             -PostalCode $PostalCode `
             -CountryCode $CountryCode
 
+    # Create alias for tenant database
+    $wtpUser = $serverName.Split("-")[-1] 
+    $tenantAlias = Get-TenantAlias `
+        -ResourceGroupName $Catalog.Database.ResourceGroupName `
+        -WtpUser $wtpUser `
+        -TenantName $TenantName `
+        -TenantServerName $serverName
+
     # register the tenant and database in the catalog
     Add-TenantDatabaseToCatalog `
         -Catalog $catalog `
         -TenantName $TenantName `
         -TenantKey $tenantKey `
         -TenantDatabase $tenantDatabase `
+        -TenantAlias $tenantAlias
 
     return $tenantKey
 }
@@ -1061,11 +1110,19 @@ function New-Tenant
         -PostalCode $PostalCode `
         -WtpUser $WtpUser
 
+    # Create alias for tenant database 
+    $tenantAlias = Get-TenantAlias `
+        -ResourceGroupName $WtpResourceGroupName `
+        -WtpUser $WtpUser `
+        -TenantName $TenantName `
+        -TenantServerName $ServerName
+
     # Register the tenant and database in the catalog
     Add-TenantDatabaseToCatalog -Catalog $catalog `
         -TenantName $TenantName `
         -TenantKey $tenantKey `
         -TenantDatabase $tenantDatabase `
+        -TenantAlias $tenantAlias
 
     return $tenantKey
 }
@@ -1407,6 +1464,7 @@ function Remove-Tenant
 
     $tenantMapping = $Catalog.ShardMap.GetMappingForKey($TenantKey)
     $tenantShardLocation = $tenantMapping.Shard.Location
+    $tenantServer = Get-TenantServerNameFromAlias $tenantShardLocation.Server
 
     # Delete catalog mapping for tenant
     try 
@@ -1431,7 +1489,7 @@ function Remove-Tenant
 
     # Delete tenant database, ignore error if alread deleted
     Remove-AzureRmSqlDatabase -ResourceGroupName $Catalog.Database.ResourceGroupName `
-        -ServerName ($tenantShard.Location.Server).Split('.')[0] `
+        -ServerName $tenantServer `
         -DatabaseName $tenantShard.Location.Database `
         -ErrorAction Continue `
         >$null
@@ -1440,7 +1498,7 @@ function Remove-Tenant
     Remove-ExtendedTenant `
         -Catalog $Catalog `
         -TenantKey $TenantKey `
-        -ServerName ($tenantShard.Location.Server).Split('.')[0] `
+        -ServerName $tenantServer `
         -DatabaseName $tenantShard.Location.Database 
 }
 
@@ -1465,7 +1523,8 @@ function Remove-TenantDatabaseForRestore
     $deletedTenantDatabase = $null
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = ($tenantMapping.Shard.Location.Server).Split('.')[0]
+    $tenantAlias = $tenantMapping.Shard.Location.Server 
+    $tenantServerName = Get-TenantServerNameFromAlias $tenantAlias
 
     $activeTenantDatabase = Get-AzureRmSqlDatabase `
                                 -ResourceGroupName $Catalog.Database.ResourceGroupName `
@@ -1568,7 +1627,8 @@ function Rename-TenantDatabase
     # Get active tenant database location
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = ($tenantMapping.Shard.Location.Server).Split('.')[0]
+    $tenantAlias = $tenantMapping.Shard.Location.Server
+    $tenantServerName = Get-TenantServerNameFromAlias $tenantAlias
 
     # Choose active tenant database as database to rename if no database specified 
     if (!$TenantDatabaseObject)
@@ -1919,14 +1979,14 @@ function Test-ValidVenueType
 .SYNOPSIS
     Validates that an input server alias for a tenant is active. Returns true if the alias exists, false otherwise
 #>
-function Test-ValidTenantAlias
+function Test-TenantAlias
 {
     param(
         [parameter(Mandatory=$true)]
         [string]$TenantAlias
     )
 
-    $tenantServer = (nslookup $TenantAlias)[6].trim()
+    $tenantServer = Get-TenantServerNameFromAlias $TenantAlias -SilentlyContinue
 
     if ($tenantServer)
     {

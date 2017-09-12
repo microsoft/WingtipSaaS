@@ -128,8 +128,7 @@
         },
         {
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantContosoConcertHall'),'/extensions/Import')]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]"            
           ],
           "apiVersion": "2017-03-01-preview",
           "name": "[concat(variables('tenantServer'), '/', variables('tenantContosoConcertHall'), '-', variables('lowerCaseUser'), '-alias')]",
@@ -172,8 +171,7 @@
         },
         {
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantFabrikamJazzClub'),'/extensions/Import')]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]"           
           ],
           "apiVersion": "2017-03-01-preview",
           "name": "[concat(variables('tenantServer'), '/', variables('tenantFabrikamJazzClub'), '-', variables('lowerCaseUser'), '-alias')]",
@@ -216,8 +214,7 @@
         },
         {
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantDogwoodDojo'),'/extensions/Import')]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]"           
           ],
           "apiVersion": "2017-03-01-preview",
           "name": "[concat(variables('tenantServer'), '/', variables('tenantDogwoodDojo'), '-', variables('lowerCaseUser'), '-alias')]",

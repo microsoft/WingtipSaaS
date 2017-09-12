@@ -1,6 +1,3 @@
-
-
-
 <#
 .SYNOPSIS
     Returns default configuration values that will be used by the Wingtip Tickets Platform application

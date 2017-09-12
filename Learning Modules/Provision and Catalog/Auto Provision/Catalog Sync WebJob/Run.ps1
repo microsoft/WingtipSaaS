@@ -229,7 +229,8 @@ While (1 -eq 1)
     $tenantDatabasesDict = @{}
     foreach ($tenantDatabase in $tenantDatabases)
     {
-        $compoundDatabaseName = "$($tenantDatabase.Location.Server.split('.',2)[0])/$($tenantDatabase.Location.Database)" 
+        $tenantServer = Get-TenantServerNameFromAlias $tenantDatabase.Location.Server
+        $compoundDatabaseName = "$($tenantServer)/$($tenantDatabase.Location.Database)" 
         $tenantDatabasesDict += @{$compoundDatabaseName = $tenantDatabase}
     }
 
@@ -256,7 +257,7 @@ While (1 -eq 1)
             # get the names of databases on this server registered in the catalog
             $tenantDatabaseNames = @()
             $tenantDatabaseNames += ($tenantDatabases `
-                | where {($_.Location.Server).split('.',2)[0] -eq $tenantServerName} `
+                | where {(Get-TenantServerNameFromAlias $_.Location.Server) -eq $tenantServerName} `
                 | select -ExpandProperty Location `
                 | select -ExpandProperty Database `
                 | sort)

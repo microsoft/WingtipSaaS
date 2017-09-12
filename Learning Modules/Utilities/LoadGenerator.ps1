@@ -81,7 +81,7 @@ $intenseLoadFactor = 15.00
 # 0 removes the effect, 0.1 will double the typical interval for 10 dbs  
 $densityLoadFactor = 0.08
 
-$CatalogServerName = $config.CatalogServerNameStem + $WtpUser
+$CatalogServerName = $config.CatalogServerNameStem + $WtpUser + "-alias"
 
 $jobs = @{}
 
@@ -118,7 +118,8 @@ while (1 -eq 1)
     $ServerNames = @()
     foreach ($shard in $Shards)
     {
-        $serverName = $shard.Location.Server.split(".",2)[0]
+        $serverAlias = $shard.Location.Server
+        $serverName = Get-TenantServerNameFromAlias $tenantAlias
         $ServerNames += $serverName
     }
 

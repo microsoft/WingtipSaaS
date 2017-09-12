@@ -18,6 +18,10 @@
       "type": "string"
     }
   },
+  "variables": {
+    "serverNameArray": "[split(parameters('serverName'),'-')]",
+    "lowerCaseUser": "[last(variables('serverNameArray'))]"
+  },
   "resources": [
     {
       "apiVersion": "2014-04-01-preview",
@@ -29,6 +33,12 @@
         "elasticPoolName": "[parameters('elasticPoolName')]"
       },
       "type": "Microsoft.Sql/servers/databases"
+    },
+    {
+      "apiVersion": "2017-03-01-preview",
+      "name": "[concat(parameters('serverName'), '/', parameters('databaseName'), '-', variables('lowerCaseUser'), '-alias')]",
+      "type": "Microsoft.Sql/servers/dnsAliases",
+      "properties":  {}
     }
   ]
 }
