@@ -119,7 +119,7 @@ while (1 -eq 1)
     foreach ($shard in $Shards)
     {
         $serverAlias = $shard.Location.Server
-        $serverName = Get-TenantServerNameFromAlias $tenantAlias
+        $serverName = Get-TenantServerNameFromAlias $serverAlias
         $ServerNames += $serverName
     }
 

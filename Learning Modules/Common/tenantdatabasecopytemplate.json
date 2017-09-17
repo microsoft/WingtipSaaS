@@ -16,11 +16,10 @@
     },
     "elasticPoolName": {
       "type": "string"
+    },
+    "tenantAlias": {
+      "type": "string"
     }
-  },
-  "variables": {
-    "serverNameArray": "[split(parameters('serverName'),'-')]",
-    "lowerCaseUser": "[last(variables('serverNameArray'))]"
   },
   "resources": [
     {
@@ -36,7 +35,7 @@
     },
     {
       "apiVersion": "2017-03-01-preview",
-      "name": "[concat(parameters('serverName'), '/', parameters('databaseName'), '-', variables('lowerCaseUser'), '-alias')]",
+      "name": "[concat(parameters('serverName'), '/', parameters('tenantAlias'))]",
       "type": "Microsoft.Sql/servers/dnsAliases",
       "properties":  {}
     }

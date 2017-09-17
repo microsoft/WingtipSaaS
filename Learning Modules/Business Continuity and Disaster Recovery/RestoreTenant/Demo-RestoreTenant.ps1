@@ -78,7 +78,7 @@ if ($DemoScenario -eq 2)
       -NoEcho
 
   # Open the events page for the restored venue
-  Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)_old"
+  Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)-old"
 
   Write-Output "'$deletedEvent' event restored to $TenantName"
   exit

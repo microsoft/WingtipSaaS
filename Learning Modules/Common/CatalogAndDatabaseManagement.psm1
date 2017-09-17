@@ -80,7 +80,7 @@ function Add-TenantDatabaseToCatalog
         [parameter(Mandatory=$true)]
         [object]$TenantDatabase,
 
-        [parameter(Mandatory=$false)]
+        [parameter(Mandatory=$true)]
         [string]$TenantAlias
     )
 
@@ -461,6 +461,7 @@ function Get-Tenant
         Name = $TenantName
         Key = $tenantKey
         Database = $tenantDatabase
+        Alias = $tenantAlias
     }
 
     return $tenant            
@@ -484,27 +485,57 @@ function Get-TenantAlias
         [parameter(Mandatory=$true)]
         [string]$TenantName,
 
-        [parameter(Mandatory=$true)]
+        [parameter(Mandatory=$false)]
         [string]$TenantServerName       
     )
 
     $requestedTenantAlias = $null
     $requestedTenantAlias = (Get-NormalizedTenantName $TenantName) + "-" + $WtpUser + "-alias"
+    $fullyQualifiedTenantAlias = $requestedTenantAlias + ".database.windows.net"
 
     # Check if input alias exists
-    $aliasExists = Test-TenantAlias $requestedTenantAlias    
+    $aliasExists = Test-TenantAlias $fullyQualifiedTenantAlias    
     if ($aliasExists)
     {
         Write-Verbose "An alias already exists for tenant '$TenantName'."
     }    
-    else
+    elseif ($TenantServerName)
     {
         # Create new alias if input alias does not exist 
         New-AzureRmSqlServerDNSAlias `
             -ResourceGroupName $ResourceGroupName `
             -ServerDNSAliasName $requestedTenantAlias `
             -ServerName $TenantServerName `
-            >$null               
+            >$null  
+
+        #Poll DNS to ensure tenant alias has propagated
+        $aliasExists = Test-TenantAlias $requestedTenantAlias
+        $elapsedTime = 0
+        $timeInterval = 5
+        while (!$aliasExists)
+        {
+            $aliasExists = Test-TenantAlias $requestedTenantAlias
+
+            if ((!$aliasExists) -and ($elapsedTime -lt 60))
+            {
+                Write-Verbose "Tenanat alias '$requestedTenantAlias' was created but has not fully propagated in DNS. Checking again in $timeInterval seconds..."
+                Start-Sleep $timeInterval
+                $elapsedTime+= $timeInterval
+            }
+            elseif ($elapsedTime -ge 60)
+            {
+                Write-Verbose "Tenant alias '$requestedTenantAlias' was created but has not completed DNS propagation. Exiting..."
+                break
+            }
+            else
+            {
+                break    
+            }
+        }             
+    }
+    else
+    {
+        $requestedTenantAlias = $null
     }
     return $requestedTenantAlias
 }
@@ -700,11 +731,19 @@ function Get-TenantServerNameFromAlias
     param
     (
         [parameter(Mandatory=$true)]
-        [string]$TenantAlias
+        [string]$fullyQualifiedTenantAlias
     )
 
-    # Perform NSLookup of DNS Alias and return the Azure SQL Server it's pointing to 
-    $fullyQualifiedServerName = (nslookup $TenantAlias)[6].trim()
+    # Lookup DNS Alias and return the Azure SQL Server to which it's pointing 
+    $serverAliases = (Resolve-DnsName $fullyQualifiedTenantAlias -DnsOnly).NameHost
+    if ($serverAliases.Length -gt 1)
+    {
+        $fullyQualifiedServerName = $serverAliases[0]
+    }
+    else
+    {
+        $fullyQualifiedServerName = $fullyQualifiedTenantAlias
+    }
     
     $serverName = $fullyQualifiedServerName.split('.')[0]
     return $serverName
@@ -750,7 +789,7 @@ function Initialize-TenantFromBufferDatabase
     $tenantKey = Get-TenantKey -TenantName $TenantName 
 
     # check if a tenant with this key is aleady registered in the catalog
-    if (Test-TenantKeyInCatalog -Catalog $catalog -TenantKey $tenantKey)
+    if (Test-TenantKeyInCatalog -Catalog $Catalog -TenantKey $tenantKey)
     {
         throw "A tenant with name '$TenantName' is already registered in the catalog."    
     }
@@ -784,7 +823,7 @@ function Initialize-TenantFromBufferDatabase
 
     # register the tenant and database in the catalog
     Add-TenantDatabaseToCatalog `
-        -Catalog $catalog `
+        -Catalog $Catalog `
         -TenantName $TenantName `
         -TenantKey $tenantKey `
         -TenantDatabase $tenantDatabase `
@@ -1110,12 +1149,11 @@ function New-Tenant
         -PostalCode $PostalCode `
         -WtpUser $WtpUser
 
-    # Create alias for tenant database 
+    # Get alias for tenant database 
     $tenantAlias = Get-TenantAlias `
         -ResourceGroupName $WtpResourceGroupName `
         -WtpUser $WtpUser `
-        -TenantName $TenantName `
-        -TenantServerName $ServerName
+        -TenantName $TenantName        
 
     # Register the tenant and database in the catalog
     Add-TenantDatabaseToCatalog -Catalog $catalog `
@@ -1198,6 +1236,9 @@ function New-TenantDatabase
         $subscriptionId = Get-SubscriptionId
         $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
 
+        # Compose tenant alias name 
+        $tenantAlias = $normalizedTenantName + "-" + $WtpUser + "-alias"
+
         # Use an ARM template to create the tenant database by copying the 'golden' database
         $deployment = New-AzureRmResourceGroupDeployment `
             -TemplateFile ($PSScriptRoot + "\" + $config.TenantDatabaseCopyTemplate) `
@@ -1207,6 +1248,7 @@ function New-TenantDatabase
             -ServerName $ServerName `
             -DatabaseName $normalizedTenantName `
             -ElasticPoolName $ElasticPoolName `
+            -TenantAlias $tenantAlias `
             -ErrorAction Stop `
             -Verbose
     }
@@ -1492,7 +1534,7 @@ function Remove-Tenant
         -ServerName $tenantServer `
         -DatabaseName $tenantShard.Location.Database `
         -ErrorAction Continue `
-        >$null
+        >$null     
 
     # Remove Tenant entry from Tenants table and corresponding database entry from Databases table
     Remove-ExtendedTenant `
@@ -1500,6 +1542,40 @@ function Remove-Tenant
         -TenantKey $TenantKey `
         -ServerName $tenantServer `
         -DatabaseName $tenantShard.Location.Database 
+
+    # Delete tenant database alias
+    $tenantAliasName = ($tenantShard.Location.Server).Split('.')[0]
+    Remove-AzureRMSqlServerDNSAlias –ResourceGroupName $Catalog.Database.ResourceGroupName `
+        -ServerDNSAliasName $tenantAliasName `
+        -ServerName $tenantServer `
+        >$null 
+
+    # Clear local DNS cache to remove tenant alias 
+    Clear-DnsClientCache >$null
+
+    # Check DNS for tenant alias, return after a minute has passed or if the alias no longer exists 
+    $aliasExists = Test-TenantAlias $tenantAliasName
+    $timeInterval = 10
+    $elapsedTime = 0
+    while ($aliasExists)
+    {
+        $aliasExists = Test-TenantAlias $tenantAliasName
+
+        if(($aliasExists) -and ($elapsedTime -lt 60))
+        {
+            Write-Verbose "Tenant alias still exists in DNS. Checking again in 10 seconds..."
+            Start-Sleep $timeInterval
+            $elapsedTime += $timeInterval
+        }
+        elseif($elapsedTime -ge 60)
+        {
+            Write-Verbose "Tenant alias still exists in DNS. 60 sec limit reached. Exiting..."
+        }
+        else
+        {
+            break    
+        }
+    }
 }
 
 
@@ -1983,18 +2059,17 @@ function Test-TenantAlias
 {
     param(
         [parameter(Mandatory=$true)]
-        [string]$TenantAlias
+        [string]$fullyQualifiedTenantAlias
     )
 
-    $tenantServer = Get-TenantServerNameFromAlias $TenantAlias -SilentlyContinue
-
-    if ($tenantServer)
+    # Retrieve the servername for input alias if it exists
+    try
     {
+        $tenantServer = Get-TenantServerNameFromAlias $fullyQualifiedTenantAlias
         return $true
     }
-    else
+    catch
     {
-        return $false    
-    }
-    
+        return $false
+    } 
 }

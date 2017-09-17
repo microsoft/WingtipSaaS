@@ -69,14 +69,14 @@ if (!(Test-TenantKeyInCatalog -Catalog $catalog -TenantKey $tenantKey))
 # Get tenant database that was active during the restore point period 
 $restoreSourceDatabase = Get-TenantDatabaseForRestorePoint -Catalog $catalog -TenantKey $tenantKey -RestorePoint $RestorePoint 
 
-$restoredTenantName = (Get-NormalizedTenantName -TenantName $TenantName) + "_old"
+$restoredTenantName = (Get-NormalizedTenantName -TenantName $TenantName) + "-old"
 $restoredTenantKey = Get-TenantKey -TenantName $restoredTenantName
 
-# Delete any previously restored tenant database with suffix '_old'
+# Delete any previously restored tenant database with suffix '-old'
 if (Test-TenantKeyInCatalog -Catalog $catalog -TenantKey $restoredTenantKey)
 {
   Write-Output "Deleting previous restored tenant database, '$restoredTenantName' ..."
-  Remove-Tenant -Catalog $catalog -TenantKey $restoredTenantKey
+  Remove-Tenant -Catalog $catalog -TenantKey $restoredTenantKey -Verbose
 }
 
 # Restore tenant database from the restore point to its prior service objective or elastic pool 
@@ -136,10 +136,17 @@ elseif ((!$restoreSourceDatabase.DeletionDate) -and (!$restoreSourceDatabase.Ela
 # Remove old catalog references in the restored tenant database 
 Remove-CatalogInfoFromTenantDatabase -TenantKey $restoredTenantKey -TenantDatabase $restoredTenantDatabase -ErrorAction Continue
 
-# Add the restored tenant database to the catalog with <tenantname>_old
+# Create alias for tenant database
+$restoredTenantAlias = Get-TenantAlias -ResourceGroupName $WtpResourceGroupName `
+  -WtpUser $WtpUser `
+  -TenantName $restoredTenantName `
+  -TenantServerName $restoredTenantDatabase.ServerName
+
+# Add the restored tenant database to the catalog with <tenantname>-old
 Add-TenantDatabaseToCatalog -Catalog $catalog `
-    -TenantName ($TenantName + "_old")`
+    -TenantName $restoredTenantName `
     -TenantKey $restoredTenantKey `
-    -TenantDatabase $restoredTenantDatabase
+    -TenantDatabase $restoredTenantDatabase `
+    -TenantAlias $restoredTenantAlias
 
 Write-Output "Restored tenant '$restoredTenantName' is available for use."
